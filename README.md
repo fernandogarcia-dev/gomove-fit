@@ -36,6 +36,37 @@ O app roda em `http://localhost:8080`.
 
 Obtenha os valores em: Supabase Dashboard → Project Settings → API.
 
+### Google (Analytics, Search Console, Ads)
+
+| Variável | Descrição |
+|---|---|
+| `VITE_GTM_ID` | Google Tag Manager container ID (hub central) |
+| `VITE_GA_MEASUREMENT_ID` | GA4 ID (referência; configure a tag no GTM) |
+| `VITE_GOOGLE_SITE_VERIFICATION` | Código meta do Search Console |
+| `VITE_GOOGLE_ADS_ID` | Google Ads conversion ID (`AW-...`) para campanhas futuras |
+| `VITE_GOOGLE_ADSENSE_CLIENT` | Publisher ID AdSense (`ca-pub-...`) |
+| `VITE_GOOGLE_ADSENSE_SLOT_*` | Slot IDs por posição (`hero`, `secondary`, `chat`) |
+
+#### Setup recomendado
+
+1. **Google Tag Manager** — crie um container em [tagmanager.google.com](https://tagmanager.google.com) e adicione `VITE_GTM_ID` no Vercel
+2. **GA4** — dentro do GTM, crie tag "Google Analytics: GA4 Configuration" com trigger "All Pages". O app envia `page_view` no dataLayer a cada navegação (SPA)
+3. **Search Console** — em [search.google.com/search-console](https://search.google.com/search-console), adicione `gomove.fit` e escolha verificação por meta tag. Copie o código para `VITE_GOOGLE_SITE_VERIFICATION`
+4. **Google Ads** (futuro) — no GTM, adicione tag "Google Ads Conversion Tracking" com `VITE_GOOGLE_ADS_ID`
+5. **AdSense** (futuro) — após aprovação, preencha `VITE_GOOGLE_ADSENSE_*` e atualize `public/ads.txt` com seu publisher ID
+
+#### Anúncios próprios (direct-sold)
+
+Edite `src/config/customAds.ts` para banners customizados por slot, sem depender do AdSense:
+
+```ts
+export const customAdSlots = {
+  hero: { imageUrl: "/ads/partner.webp", linkUrl: "https://partner.com", alt: "Partner" },
+};
+```
+
+Prioridade por slot: **custom ad** > **AdSense** > **placeholder**.
+
 ## Build
 
 ```sh

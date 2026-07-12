@@ -80,7 +80,7 @@ const Index = () => {
         </div>
       </section>
 
-      <AdBanner className="container mb-12" label="Espaço para anúncio — Banner principal" />
+      <AdBanner className="container mb-12" slot="hero" label="Espaco para anuncio — Banner principal" />
 
       {/* Disclaimer */}
       <section className="container mb-16">
@@ -111,7 +111,7 @@ const Index = () => {
         </div>
       </section>
 
-      <AdBanner className="container mb-16" label="Espaço para anúncio — Banner secundário" />
+      <AdBanner className="container mb-16" slot="secondary" label="Espaco para anuncio — Banner secundario" />
 
       {/* Footer */}
       <footer className="border-t border-border bg-muted/30 py-8">

@@ -3,6 +3,7 @@ import { Dumbbell, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import GoMoveLogo from "@/components/GoMoveLogo";
+import AdBanner from "@/components/AdBanner";
 
 const Chat = () => {
   return (
@@ -34,6 +35,8 @@ const Chat = () => {
           </p>
         </div>
       </div>
+
+      <AdBanner className="container pb-6" slot="chat" label="Espaco para anuncio — Chat" />
     </div>
   );
 };

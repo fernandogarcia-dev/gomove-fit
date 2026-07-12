@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics/events";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -28,6 +29,7 @@ const Login = () => {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
+        trackEvent("sign_up", { method: "email" });
         toast({
           title: "Cadastro realizado!",
           description: "Verifique seu e-mail para confirmar o cadastro.",
@@ -35,6 +37,7 @@ const Login = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        trackEvent("login", { method: "email" });
         navigate("/");
       }
     } catch (error: unknown) {

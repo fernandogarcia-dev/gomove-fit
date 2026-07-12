@@ -3,6 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import GoogleTagManager from "@/components/GoogleTagManager";
+import AnalyticsRouteTracker from "@/components/AnalyticsRouteTracker";
+import SiteVerification from "@/components/SiteVerification";
 import Index from "./pages/Index";
 import Chat from "./pages/Chat";
 import Login from "./pages/Login";
@@ -16,6 +19,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <GoogleTagManager />
+        <SiteVerification />
+        <AnalyticsRouteTracker />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/chat" element={<Chat />} />
