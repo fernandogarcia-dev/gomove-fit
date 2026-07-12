@@ -41,4 +41,4 @@ export type BodyRegion = (typeof BODY_REGIONS)[number]["value"];
 export type Difficulty = (typeof DIFFICULTIES)[number]["value"];
 export type Equipment = (typeof EQUIPMENT_OPTIONS)[number]["value"];
 
-export const ADMIN_EMAILS = ["fernando.garcia@backlinetalent.com"] as const;
+export const ADMIN_EMAILS = ["admin@gomove.fit"] as const;
