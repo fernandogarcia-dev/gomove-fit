@@ -18,10 +18,46 @@ export const EXERCISE_IMAGE_SLUGS: Record<string, string> = {
   "Bodyweight squat": "bodyweight-squat",
 };
 
-export const exerciseImageUrl = (name: string, baseUrl = "https://gomove.fit"): string | null => {
+export const exerciseImageUrl = (name: string, baseUrl = "https://www.gomove.fit"): string | null => {
   const slug = EXERCISE_IMAGE_SLUGS[name];
   if (!slug) return null;
   return `${baseUrl.replace(/\/$/, "")}/exercises/${slug}.webp`;
+};
+
+export const isLocalExerciseImageUrl = (imageUrl?: string | null): boolean => {
+  if (!imageUrl) return false;
+  try {
+    const url = new URL(imageUrl, "https://www.gomove.fit");
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Returns a browser-safe image URL and repairs legacy localhost URLs that were
+ * accidentally written to the shared database by local admin seeding.
+ */
+export const resolveExerciseImageUrl = (
+  name: string,
+  imageUrl?: string | null,
+): string | null => {
+  const defaultPath = EXERCISE_IMAGE_SLUGS[name]
+    ? `/exercises/${EXERCISE_IMAGE_SLUGS[name]}.webp`
+    : null;
+
+  if (!imageUrl) return defaultPath;
+
+  try {
+    const url = new URL(imageUrl, "https://www.gomove.fit");
+    if (isLocalExerciseImageUrl(imageUrl)) {
+      return defaultPath ?? `${url.pathname}${url.search}`;
+    }
+  } catch {
+    return defaultPath;
+  }
+
+  return imageUrl;
 };
 
 /** Local dev fallback when production URLs are not deployed yet */

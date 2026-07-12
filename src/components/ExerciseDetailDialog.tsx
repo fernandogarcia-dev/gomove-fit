@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useExerciseDetail } from "@/hooks/use-exercise-detail";
 import { useSubscription } from "@/hooks/use-subscription";
 import { BODY_REGIONS, DIFFICULTIES, EXERCISE_TYPES } from "@/lib/constants";
+import { resolveExerciseImageUrl } from "@/lib/exercise-images";
 
 type ExerciseDetailDialogProps = {
   exerciseId: string | null;
@@ -35,9 +36,9 @@ const ExerciseDetailDialog = ({ exerciseId, onOpenChange }: ExerciseDetailDialog
             </DialogHeader>
 
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-              {exercise.image_url ? (
+              {resolveExerciseImageUrl(exercise.name, exercise.image_url) ? (
                 <img
-                  src={exercise.image_url}
+                  src={resolveExerciseImageUrl(exercise.name, exercise.image_url)!}
                   alt={exercise.name}
                   className="h-full w-full object-cover"
                 />

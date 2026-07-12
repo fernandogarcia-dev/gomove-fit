@@ -54,7 +54,12 @@ import {
 } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { withTimeout } from "@/lib/query-utils";
-import { EXERCISE_IMAGE_SLUGS, exerciseImageUrl } from "@/lib/exercise-images";
+import {
+  EXERCISE_IMAGE_SLUGS,
+  exerciseImageUrl,
+  isLocalExerciseImageUrl,
+  resolveExerciseImageUrl,
+} from "@/lib/exercise-images";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -103,7 +108,7 @@ const exerciseToForm = (exercise: Exercise): ExerciseForm => ({
   duration_minutes: String(exercise.duration_minutes ?? 10),
   benefits: exercise.benefits ?? "",
   contraindications: exercise.contraindications ?? "",
-  image_url: exercise.image_url ?? "",
+  image_url: resolveExerciseImageUrl(exercise.name, exercise.image_url) ?? "",
   video_url: exercise.video_url ?? "",
 });
 
@@ -129,8 +134,6 @@ const AdminContent = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
   const autoSeedAttempted = useRef(false);
-
-  const baseImageUrl = import.meta.env.DEV ? window.location.origin : "https://gomove.fit";
 
   const { data: exercises = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-exercises"],
@@ -289,9 +292,13 @@ const AdminContent = () => {
 
   const seedImagesMutation = useMutation({
     mutationFn: async () => {
-      const missing = exercises.filter((item) => !item.image_url && EXERCISE_IMAGE_SLUGS[item.name]);
+      const missing = exercises.filter(
+        (item) =>
+          (!item.image_url || isLocalExerciseImageUrl(item.image_url)) &&
+          EXERCISE_IMAGE_SLUGS[item.name],
+      );
       for (const exercise of missing) {
-        const image_url = exerciseImageUrl(exercise.name, baseImageUrl);
+        const image_url = exerciseImageUrl(exercise.name);
         if (!image_url) continue;
         const { error } = await supabase
           .from("exercises")
@@ -320,7 +327,11 @@ const AdminContent = () => {
     if (
       !isLoading &&
       exercises.length > 0 &&
-      exercises.some((item) => !item.image_url && EXERCISE_IMAGE_SLUGS[item.name]) &&
+      exercises.some(
+        (item) =>
+          (!item.image_url || isLocalExerciseImageUrl(item.image_url)) &&
+          EXERCISE_IMAGE_SLUGS[item.name],
+      ) &&
       !autoSeedAttempted.current &&
       !seedImagesMutation.isPending
     ) {
@@ -466,8 +477,12 @@ const AdminContent = () => {
                 className="flex items-center gap-3 rounded-xl border bg-card p-3"
               >
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                  {exercise.image_url ? (
-                    <img src={exercise.image_url} alt="" className="h-full w-full object-cover" />
+                  {resolveExerciseImageUrl(exercise.name, exercise.image_url) ? (
+                    <img
+                      src={resolveExerciseImageUrl(exercise.name, exercise.image_url)!}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <ImageOff className="h-5 w-5 text-muted-foreground" />
                   )}

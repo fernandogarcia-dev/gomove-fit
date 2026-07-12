@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dumbbell, Loader2 } from "lucide-react";
 import { BODY_REGIONS, DIFFICULTIES, EXERCISE_TYPES } from "@/lib/constants";
+import { resolveExerciseImageUrl } from "@/lib/exercise-images";
 import { useExercises } from "@/hooks/use-exercises";
 import { trackEvent } from "@/lib/analytics/events";
 
@@ -105,45 +106,49 @@ const Exercises = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((exercise) => (
-              <button
-                key={exercise.id}
-                type="button"
-                onClick={() => openExercise(exercise.id)}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                  {exercise.image_url ? (
-                    <img
-                      src={exercise.image_url}
-                      alt={exercise.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <Dumbbell className="h-6 w-6 text-muted-foreground/50" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <h2 className="font-display font-semibold">{exercise.name}</h2>
-                    <Badge variant="secondary">
-                      {BODY_REGIONS.find((item) => item.value === exercise.body_region)?.label ??
-                        exercise.body_region}
-                    </Badge>
-                    <Badge variant="outline">
-                      {DIFFICULTIES.find((item) => item.value === exercise.difficulty)?.label ??
-                        exercise.difficulty}
-                    </Badge>
+            {filtered.map((exercise) => {
+              const imageUrl = resolveExerciseImageUrl(exercise.name, exercise.image_url);
+
+              return (
+                <button
+                  key={exercise.id}
+                  type="button"
+                  onClick={() => openExercise(exercise.id)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={exercise.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Dumbbell className="h-6 w-6 text-muted-foreground/50" />
+                    )}
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {EXERCISE_TYPES.find((item) => item.value === exercise.exercise_type)?.label ??
-                      exercise.exercise_type}
-                    {exercise.duration_minutes ? ` · ${exercise.duration_minutes} min` : ""}
-                    {exercise.sets_reps ? ` · ${exercise.sets_reps}` : ""}
-                  </p>
-                </div>
-              </button>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h2 className="font-display font-semibold">{exercise.name}</h2>
+                      <Badge variant="secondary">
+                        {BODY_REGIONS.find((item) => item.value === exercise.body_region)?.label ??
+                          exercise.body_region}
+                      </Badge>
+                      <Badge variant="outline">
+                        {DIFFICULTIES.find((item) => item.value === exercise.difficulty)?.label ??
+                          exercise.difficulty}
+                      </Badge>
+                    </div>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {EXERCISE_TYPES.find((item) => item.value === exercise.exercise_type)?.label ??
+                        exercise.exercise_type}
+                      {exercise.duration_minutes ? ` · ${exercise.duration_minutes} min` : ""}
+                      {exercise.sets_reps ? ` · ${exercise.sets_reps}` : ""}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
