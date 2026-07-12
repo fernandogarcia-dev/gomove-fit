@@ -1,7 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ExerciseDetailDialog from "@/components/ExerciseDetailDialog";
+import ShareProgressButton from "@/components/ShareProgressButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DAYS_OF_WEEK } from "@/lib/constants";
 import { getWeekStart, type PlanData } from "@/lib/plan-builder";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics/events";
+import { withTimeout } from "@/lib/query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const PlanDetailContent = () => {
@@ -18,35 +23,41 @@ const PlanDetailContent = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const weekStart = getWeekStart();
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
 
-  const { data: plan, isLoading } = useQuery({
+  const { data: plan, isLoading, isError, refetch } = useQuery({
     queryKey: ["saved-plan", id],
     enabled: Boolean(id && user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("id", id!)
-        .eq("user_id", user!.id)
-        .single();
+      const { data, error } = await withTimeout(
+        supabase.from("saved_plans").select("*").eq("id", id!).eq("user_id", user!.id).single(),
+        10_000,
+        "Plan detail",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   const { data: tracking = [] } = useQuery({
     queryKey: ["exercise-tracking", id, weekStart],
     enabled: Boolean(id && user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exercise_tracking")
-        .select("*")
-        .eq("plan_id", id!)
-        .eq("user_id", user!.id)
-        .eq("week_start", weekStart);
+      const { data, error } = await withTimeout(
+        supabase
+          .from("exercise_tracking")
+          .select("*")
+          .eq("plan_id", id!)
+          .eq("user_id", user!.id)
+          .eq("week_start", weekStart),
+        10_000,
+        "Exercise tracking",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   const toggleMutation = useMutation({
@@ -122,6 +133,19 @@ const PlanDetailContent = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <AppShell title="Plan" showBack backTo="/plans">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <p className="font-medium">Could not load this plan</p>
+          <Button className="mt-4" variant="outline" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
   if (!plan || !planData) {
     return (
       <AppShell title="Plan" showBack backTo="/plans">
@@ -135,12 +159,15 @@ const PlanDetailContent = () => {
 
   return (
     <AppShell title={plan.title} showBack backTo="/plans">
-      <div className="mb-4 rounded-xl border border-border bg-card p-4">
-        <p className="text-sm text-muted-foreground">This week</p>
-        <p className="font-display text-2xl font-bold">
-          {completedCount}/{totalExercises}
-        </p>
-        <p className="text-sm text-muted-foreground">exercises completed</p>
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+        <div>
+          <p className="text-sm text-muted-foreground">This week</p>
+          <p className="font-display text-2xl font-bold">
+            {completedCount}/{totalExercises}
+          </p>
+          <p className="text-sm text-muted-foreground">exercises completed</p>
+        </div>
+        <ShareProgressButton completed={completedCount} total={totalExercises} />
       </div>
 
       <div className="space-y-4">
@@ -182,22 +209,29 @@ const PlanDetailContent = () => {
                         }
                         className="mt-1"
                       />
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={
-                            isCompleted ? "font-medium line-through opacity-60" : "font-medium"
-                          }
-                        >
-                          {exercise.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {exercise.setsReps ?? "Follow instructions"}
-                          {exercise.durationMinutes ? ` · ${exercise.durationMinutes} min` : ""}
-                        </p>
-                        {exercise.instructions ? (
-                          <p className="mt-1 text-sm leading-relaxed">{exercise.instructions}</p>
-                        ) : null}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          trackEvent("exercise_view", { source: "plan_detail" });
+                          setSelectedExerciseId(exercise.exerciseId);
+                        }}
+                        className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
+                      >
+                        <div className="min-w-0">
+                          <p
+                            className={
+                              isCompleted ? "font-medium line-through opacity-60" : "font-medium"
+                            }
+                          >
+                            {exercise.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {exercise.setsReps ?? "Follow instructions"}
+                            {exercise.durationMinutes ? ` · ${exercise.durationMinutes} min` : ""}
+                          </p>
+                        </div>
+                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                      </button>
                     </li>
                   );
                 })}
@@ -206,6 +240,11 @@ const PlanDetailContent = () => {
           </section>
         ))}
       </div>
+
+      <ExerciseDetailDialog
+        exerciseId={selectedExerciseId}
+        onOpenChange={(open) => !open && setSelectedExerciseId(null)}
+      />
     </AppShell>
   );
 };

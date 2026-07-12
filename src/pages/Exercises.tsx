@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import ExerciseDetailDialog from "@/components/ExerciseDetailDialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,23 +10,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Dumbbell, Loader2 } from "lucide-react";
 import { BODY_REGIONS, DIFFICULTIES, EXERCISE_TYPES } from "@/lib/constants";
-import { useQuery } from "@tanstack/react-query";
+import { useExercises } from "@/hooks/use-exercises";
+import { trackEvent } from "@/lib/analytics/events";
 
 const Exercises = () => {
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("all");
   const [difficulty, setDifficulty] = useState("all");
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
 
-  const { data: exercises = [], isLoading } = useQuery({
-    queryKey: ["exercises"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("exercises").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: exercises = [], isLoading, isError, refetch, isFetching } = useExercises();
+
+  const openExercise = (id: string) => {
+    trackEvent("exercise_view", { source: "catalog" });
+    setSelectedExerciseId(id);
+  };
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -80,7 +82,18 @@ const Exercises = () => {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading exercises...</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Loading exercises...
+          </div>
+        ) : isError ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+            <p className="font-medium">Could not load exercises</p>
+            <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+            <Button className="mt-4" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? "Retrying..." : "Try again"}
+            </Button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-8 text-center">
             <p className="font-medium">No exercises found</p>
@@ -93,40 +106,52 @@ const Exercises = () => {
         ) : (
           <div className="space-y-3">
             {filtered.map((exercise) => (
-              <article key={exercise.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h2 className="font-display font-semibold">{exercise.name}</h2>
-                  <Badge variant="secondary">
-                    {BODY_REGIONS.find((item) => item.value === exercise.body_region)?.label ??
-                      exercise.body_region}
-                  </Badge>
-                  <Badge variant="outline">
-                    {DIFFICULTIES.find((item) => item.value === exercise.difficulty)?.label ??
-                      exercise.difficulty}
-                  </Badge>
+              <button
+                key={exercise.id}
+                type="button"
+                onClick={() => openExercise(exercise.id)}
+                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
+              >
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                  {exercise.image_url ? (
+                    <img
+                      src={exercise.image_url}
+                      alt={exercise.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Dumbbell className="h-6 w-6 text-muted-foreground/50" />
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {EXERCISE_TYPES.find((item) => item.value === exercise.exercise_type)?.label ??
-                    exercise.exercise_type}
-                  {exercise.duration_minutes ? ` · ${exercise.duration_minutes} min` : ""}
-                  {exercise.sets_reps ? ` · ${exercise.sets_reps}` : ""}
-                </p>
-                {exercise.instructions ? (
-                  <p className="mt-2 text-sm leading-relaxed">{exercise.instructions}</p>
-                ) : null}
-                {exercise.benefits ? (
-                  <p className="mt-2 text-sm text-primary">Benefits: {exercise.benefits}</p>
-                ) : null}
-                {exercise.contraindications ? (
-                  <p className="mt-2 text-xs text-amber-700">
-                    Caution: {exercise.contraindications}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h2 className="font-display font-semibold">{exercise.name}</h2>
+                    <Badge variant="secondary">
+                      {BODY_REGIONS.find((item) => item.value === exercise.body_region)?.label ??
+                        exercise.body_region}
+                    </Badge>
+                    <Badge variant="outline">
+                      {DIFFICULTIES.find((item) => item.value === exercise.difficulty)?.label ??
+                        exercise.difficulty}
+                    </Badge>
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {EXERCISE_TYPES.find((item) => item.value === exercise.exercise_type)?.label ??
+                      exercise.exercise_type}
+                    {exercise.duration_minutes ? ` · ${exercise.duration_minutes} min` : ""}
+                    {exercise.sets_reps ? ` · ${exercise.sets_reps}` : ""}
                   </p>
-                ) : null}
-              </article>
+                </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      <ExerciseDetailDialog
+        exerciseId={selectedExerciseId}
+        onOpenChange={(open) => !open && setSelectedExerciseId(null)}
+      />
     </AppShell>
   );
 };

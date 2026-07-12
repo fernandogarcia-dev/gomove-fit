@@ -1,28 +1,34 @@
+import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { CalendarDays, ChevronRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { PlanData } from "@/lib/plan-builder";
-import { useQuery } from "@tanstack/react-query";
+import { withTimeout } from "@/lib/query-utils";
 
 const MyPlansContent = () => {
   const { user } = useAuth();
 
-  const { data: plans = [], isLoading } = useQuery({
+  const { data: plans = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["saved-plans", user?.id],
     enabled: Boolean(user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from("saved_plans")
+          .select("*")
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false }),
+        10_000,
+        "Saved plans",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   return (
@@ -33,7 +39,17 @@ const MyPlansContent = () => {
         </Link>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading your plans...</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Loading your plans...
+          </div>
+        ) : isError ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+            <p className="font-medium">Could not load your plans</p>
+            <Button className="mt-4" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? "Retrying..." : "Try again"}
+            </Button>
+          </div>
         ) : plans.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-8 text-center">
             <CalendarDays className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />

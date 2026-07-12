@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, LogOut, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoMoveLogo from "@/components/GoMoveLogo";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/use-subscription";
 
 type AppHeaderProps = {
   showBack?: boolean;
@@ -11,7 +12,14 @@ type AppHeaderProps = {
 };
 
 const AppHeader = ({ showBack = false, backTo = "/", title }: AppHeaderProps) => {
+  const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
+  const { isPro } = useSubscription();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-lg">
@@ -33,6 +41,14 @@ const AppHeader = ({ showBack = false, backTo = "/", title }: AppHeaderProps) =>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {!isPro ? (
+            <Link to="/pro">
+              <Button variant="ghost" size="sm" className="gap-1 text-primary hover:text-primary">
+                <Sparkles className="h-4 w-4" />
+                PRO
+              </Button>
+            </Link>
+          ) : null}
           {user ? (
             <>
               {isAdmin ? (
@@ -42,7 +58,7 @@ const AppHeader = ({ showBack = false, backTo = "/", title }: AppHeaderProps) =>
                   </Button>
                 </Link>
               ) : null}
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => signOut()}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only">Sign out</span>
               </Button>
