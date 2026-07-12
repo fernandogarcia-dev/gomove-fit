@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics/events";
+import { clearStoredReferralCode, getStoredReferralCode } from "@/lib/referral";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -25,12 +26,17 @@ const Login = () => {
 
     try {
       if (isSignUp) {
+        const referralCode = getStoredReferralCode();
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: referralCode ? { referral_code: referralCode } : undefined,
+          },
         });
         if (error) throw error;
+        clearStoredReferralCode();
         trackEvent("sign_up", { method: "email" });
 
         if (data.session) {

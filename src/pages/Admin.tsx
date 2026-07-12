@@ -42,6 +42,8 @@ type ExerciseForm = {
   duration_minutes: string;
   benefits: string;
   contraindications: string;
+  image_url: string;
+  video_url: string;
 };
 
 const emptyForm = (): ExerciseForm => ({
@@ -55,6 +57,8 @@ const emptyForm = (): ExerciseForm => ({
   duration_minutes: "10",
   benefits: "",
   contraindications: "",
+  image_url: "",
+  video_url: "",
 });
 
 const exerciseToForm = (exercise: Exercise): ExerciseForm => ({
@@ -68,6 +72,8 @@ const exerciseToForm = (exercise: Exercise): ExerciseForm => ({
   duration_minutes: String(exercise.duration_minutes ?? 10),
   benefits: exercise.benefits ?? "",
   contraindications: exercise.contraindications ?? "",
+  image_url: exercise.image_url ?? "",
+  video_url: exercise.video_url ?? "",
 });
 
 const AdminContent = () => {
@@ -104,6 +110,8 @@ const AdminContent = () => {
         duration_minutes: Number(form.duration_minutes) || null,
         benefits: form.benefits.trim() || null,
         contraindications: form.contraindications.trim() || null,
+        image_url: form.image_url.trim() || null,
+        video_url: form.video_url.trim() || null,
         created_by: user!.id,
       };
 
@@ -336,6 +344,36 @@ const AdminContent = () => {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="image_url">Image URL</Label>
+            <Input
+              id="image_url"
+              placeholder="https://..."
+              value={form.image_url}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, image_url: event.target.value }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              An easy-to-recognize photo or illustration showing the exercise position.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="video_url">Video URL</Label>
+            <Input
+              id="video_url"
+              placeholder="https://..."
+              value={form.video_url}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, video_url: event.target.value }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Demonstration video (MP4 link). Only visible to GoMove PRO subscribers in the app.
+            </p>
+          </div>
+
           <Button
             className="w-full"
             onClick={() => saveMutation.mutate()}
@@ -369,11 +407,21 @@ const AdminContent = () => {
                 key={exercise.id}
                 className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-4"
               >
-                <div className="min-w-0">
-                  <p className="font-medium">{exercise.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {exercise.body_region} · {exercise.difficulty}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                    {exercise.image_url ? (
+                      <img src={exercise.image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium">{exercise.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {exercise.body_region} · {exercise.difficulty}
+                      {exercise.video_url ? " · 🎬 video" : ""}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(exercise)}>

@@ -79,6 +79,7 @@ export type Database = {
           name: string
           sets_reps: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           benefits?: string | null
@@ -96,6 +97,7 @@ export type Database = {
           name: string
           sets_reps?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           benefits?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           name?: string
           sets_reps?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -122,6 +125,8 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          referral_code: string
+          referred_by: string | null
           updated_at: string
           user_id: string
         }
@@ -130,6 +135,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          referral_code?: string
+          referred_by?: string | null
           updated_at?: string
           user_id: string
         }
@@ -138,6 +145,50 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          id: string
+          plan: string
+          pro_until: string | null
+          provider: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan?: string
+          pro_until?: string | null
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan?: string
+          pro_until?: string | null
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
         }
@@ -196,6 +247,12 @@ export type Database = {
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_pro: {
+        Args: {
           _user_id: string
         }
         Returns: boolean

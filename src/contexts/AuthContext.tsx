@@ -21,6 +21,8 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const AUTH_INIT_TIMEOUT_MS = 5000;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -32,20 +34,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
 
-    if (error) {
+      if (error) {
+        console.error("Failed to load admin role", error);
+        setIsAdmin(false);
+        return;
+      }
+
+      setIsAdmin(Boolean(data));
+    } catch (error) {
       console.error("Failed to load admin role", error);
       setIsAdmin(false);
-      return;
     }
-
-    setIsAdmin(Boolean(data));
   }, []);
 
   const refreshRole = useCallback(async () => {
@@ -55,23 +62,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      loadAdminRole(data.session?.user.id).finally(() => {
-        if (mounted) setLoading(false);
-      });
-    });
+    const finishLoading = () => {
+      if (mounted) setLoading(false);
+    };
+
+    const timeoutId = window.setTimeout(finishLoading, AUTH_INIT_TIMEOUT_MS);
+
+    const init = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) console.error("Failed to get session", error);
+        if (!mounted) return;
+        setSession(data.session ?? null);
+        await loadAdminRole(data.session?.user.id);
+      } catch (error) {
+        console.error("Auth init failed", error);
+      } finally {
+        window.clearTimeout(timeoutId);
+        finishLoading();
+      }
+    };
+
+    init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession);
-      loadAdminRole(nextSession?.user.id);
+      await loadAdminRole(nextSession?.user.id);
+      finishLoading();
     });
 
     return () => {
       mounted = false;
+      window.clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, [loadAdminRole]);

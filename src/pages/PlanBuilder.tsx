@@ -1,19 +1,13 @@
-import { useMemo, useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Save } from "lucide-react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Check, Save } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useExercises } from "@/hooks/use-exercises";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics/events";
 import {
@@ -28,65 +22,102 @@ import {
 import { buildWeeklyPlan, isPlanEmpty, type PlanData } from "@/lib/plan-builder";
 import type { Json } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { clearPendingPlan, loadPendingPlan, savePendingPlan } from "@/lib/pending-plan";
 
+const QUESTION_STEPS = 5;
 const defaultDays = [1, 3, 5];
+
+type OptionProps = {
+  label: string;
+  description?: string;
+  selected: boolean;
+  onClick: () => void;
+};
+
+const OptionButton = ({ label, description, selected, onClick }: OptionProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "w-full rounded-xl border-2 px-4 py-4 text-left transition-colors",
+      selected
+        ? "border-primary bg-primary/10 text-foreground"
+        : "border-border bg-card hover:border-primary/40",
+    )}
+  >
+    <span className="font-medium">{label}</span>
+    {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+  </button>
+);
 
 const PlanBuilder = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: exercises = [], isLoading: exercisesLoading, isError: exercisesError } = useExercises();
 
-  const [bodyRegion, setBodyRegion] = useState<BodyRegion>("back");
-  const [difficulty, setDifficulty] = useState<Difficulty>("iniciante");
-  const [equipment, setEquipment] = useState<Equipment[]>(["none", "mat"]);
-  const [minutesPerDay, setMinutesPerDay] = useState(20);
+  const pendingPlan = useMemo(() => loadPendingPlan(), []);
+
+  const [step, setStep] = useState(1);
+  const [bodyRegion, setBodyRegion] = useState<BodyRegion | null>(pendingPlan?.bodyRegion ?? null);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [equipment, setEquipment] = useState<Equipment[]>(["none"]);
+  const [minutesPerDay, setMinutesPerDay] = useState<number | null>(null);
   const [daysPerWeek, setDaysPerWeek] = useState<number[]>(defaultDays);
-  const [plan, setPlan] = useState<PlanData | null>(null);
+  const [plan, setPlan] = useState<PlanData | null>(pendingPlan?.plan ?? null);
   const [saving, setSaving] = useState(false);
+  const autoSaveAttempted = useRef(false);
 
-  const { data: exercises = [], isLoading } = useQuery({
-    queryKey: ["exercises"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("exercises").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
+  const progressValue = plan ? 100 : (step / QUESTION_STEPS) * 100;
 
-  const preferences = useMemo(
-    () => ({
+  const toggleEquipment = (value: Equipment) => {
+    setEquipment((current) => {
+      if (current.includes(value)) {
+        const next = current.filter((item) => item !== value);
+        return next.length > 0 ? next : current;
+      }
+      return [...current, value];
+    });
+  };
+
+  const toggleDay = (value: number) => {
+    setDaysPerWeek((current) => {
+      if (current.includes(value)) {
+        const next = current.filter((day) => day !== value);
+        return next.length > 0 ? next : current;
+      }
+      return [...current, value].sort((a, b) => a - b);
+    });
+  };
+
+  const canAdvance = useMemo(() => {
+    switch (step) {
+      case 1:
+        return bodyRegion !== null;
+      case 2:
+        return difficulty !== null;
+      case 3:
+        return equipment.length > 0;
+      case 4:
+        return minutesPerDay !== null;
+      case 5:
+        return daysPerWeek.length > 0;
+      default:
+        return false;
+    }
+  }, [step, bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek]);
+
+  const generatePlan = useCallback(() => {
+    if (!bodyRegion || !difficulty || minutesPerDay === null) return;
+
+    trackEvent("plan_start");
+    const preferences = {
       bodyRegion,
       difficulty,
       equipment,
       minutesPerDay,
       daysPerWeek,
-    }),
-    [bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek],
-  );
-
-  useEffect(() => {
-    setPlan(null);
-  }, [bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek]);
-
-  const toggleEquipment = (value: Equipment, checked: boolean) => {
-    setEquipment((current) => {
-      if (checked) return [...new Set([...current, value])];
-      const next = current.filter((item) => item !== value);
-      return next.length > 0 ? next : ["none"];
-    });
-  };
-
-  const toggleDay = (value: number, checked: boolean) => {
-    setDaysPerWeek((current) => {
-      if (checked) return [...new Set([...current, value])].sort((a, b) => a - b);
-      const next = current.filter((day) => day !== value);
-      return next.length > 0 ? next : current;
-    });
-  };
-
-  const handleGenerate = () => {
-    trackEvent("plan_start");
+    };
     const generated = buildWeeklyPlan(exercises, preferences);
     setPlan(generated);
 
@@ -94,22 +125,45 @@ const PlanBuilder = () => {
       toast({
         variant: "destructive",
         title: "No exercises matched",
-        description: "Try another body region, difficulty, or equipment selection.",
+        description: "Try different options or browse the catalog.",
       });
     }
-  };
+  }, [bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek, exercises, toast]);
 
-  const handleSave = async () => {
-    if (!plan || isPlanEmpty(plan)) {
+  const handleNext = () => {
+    if (step < QUESTION_STEPS) {
+      setStep(step + 1);
+      return;
+    }
+    if (exercisesLoading) {
+      toast({ title: "Loading exercises...", description: "Please wait a moment." });
+      return;
+    }
+    if (exercisesError) {
       toast({
         variant: "destructive",
-        title: "Cannot save empty plan",
-        description: "Generate a plan with at least one exercise first.",
+        title: "Could not load exercises",
+        description: "Check your connection and try again.",
       });
       return;
     }
+    generatePlan();
+  };
+
+  const handleBack = () => {
+    if (plan) {
+      setPlan(null);
+      return;
+    }
+    if (step > 1) setStep(step - 1);
+  };
+
+  const handleSave = useCallback(async () => {
+    if (!plan || isPlanEmpty(plan) || !bodyRegion) return;
 
     if (!user) {
+      // Keep the generated plan so it survives the sign-in/sign-up round trip.
+      savePendingPlan({ plan, bodyRegion });
       navigate("/login", { state: { from: "/plan" } });
       return;
     }
@@ -127,6 +181,7 @@ const PlanBuilder = () => {
         .single();
 
       if (error) throw error;
+      clearPendingPlan();
       trackEvent("plan_save");
       toast({ title: "Plan saved", description: "Your weekly plan is ready to follow." });
       navigate(`/plans/${data.id}`);
@@ -139,140 +194,199 @@ const PlanBuilder = () => {
     } finally {
       setSaving(false);
     }
+  }, [plan, bodyRegion, user, navigate, toast]);
+
+  // If the user just signed in/up after building a plan, save it automatically —
+  // no need to click "Save" again and lose momentum.
+  useEffect(() => {
+    if (user && pendingPlan && !autoSaveAttempted.current) {
+      autoSaveAttempted.current = true;
+      handleSave();
+    }
+  }, [user, pendingPlan, handleSave]);
+
+  const restart = () => {
+    clearPendingPlan();
+    setPlan(null);
+    setStep(1);
+    setBodyRegion(null);
+    setDifficulty(null);
+    setEquipment(["none"]);
+    setMinutesPerDay(null);
+    setDaysPerWeek(defaultDays);
   };
 
-  const planHasExercises = plan && !isPlanEmpty(plan);
+  const stepLabel = plan
+    ? "Your plan is ready"
+    : `Step ${step} of ${QUESTION_STEPS}`;
 
   return (
     <AppShell title="Build your plan" showBack backTo="/">
       <MedicalDisclaimer compact />
 
-      <div className="mt-4 space-y-6">
-        <section className="space-y-4 rounded-xl border border-border bg-card p-4">
-          <div className="space-y-2">
-            <Label>Body region</Label>
-            <Select value={bodyRegion} onValueChange={(value) => setBodyRegion(value as BodyRegion)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BODY_REGIONS.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="mt-4 space-y-5">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-foreground">{stepLabel}</span>
+            {!plan ? <span className="text-muted-foreground">{Math.round(progressValue)}%</span> : null}
           </div>
+          <Progress value={progressValue} className="h-2" />
+        </div>
 
-          <div className="space-y-2">
-            <Label>Difficulty</Label>
-            <Select value={difficulty} onValueChange={(value) => setDifficulty(value as Difficulty)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DIFFICULTIES.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {!plan ? (
+          <section className="space-y-4">
+            {step === 1 ? (
+              <>
+                <h2 className="font-display text-xl font-semibold">Where do you feel discomfort?</h2>
+                <p className="text-sm text-muted-foreground">Pick the area you want to focus on.</p>
+                <div className="grid gap-2">
+                  {BODY_REGIONS.map((item) => (
+                    <OptionButton
+                      key={item.value}
+                      label={item.label}
+                      selected={bodyRegion === item.value}
+                      onClick={() => setBodyRegion(item.value)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
 
-          <div className="space-y-2">
-            <Label>Available equipment</Label>
-            <p className="text-xs text-muted-foreground">
-              Select everything you have at home. Exercises match if you have any required item.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {EQUIPMENT_OPTIONS.map((item) => (
-                <label key={item.value} className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={equipment.includes(item.value)}
-                    onCheckedChange={(checked) =>
-                      toggleEquipment(item.value, checked === true)
-                    }
-                  />
-                  {item.label}
-                </label>
-              ))}
-            </div>
-          </div>
+            {step === 2 ? (
+              <>
+                <h2 className="font-display text-xl font-semibold">What is your fitness level?</h2>
+                <p className="text-sm text-muted-foreground">Choose the option that fits you best today.</p>
+                <div className="grid gap-2">
+                  {DIFFICULTIES.map((item) => (
+                    <OptionButton
+                      key={item.value}
+                      label={item.label}
+                      selected={difficulty === item.value}
+                      onClick={() => setDifficulty(item.value)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
 
-          <div className="space-y-2">
-            <Label>Minutes per session</Label>
-            <Select
-              value={String(minutesPerDay)}
-              onValueChange={(value) => setMinutesPerDay(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[10, 15, 20, 30, 45].map((value) => (
-                  <SelectItem key={value} value={String(value)}>
-                    {value} minutes
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            {step === 3 ? (
+              <>
+                <h2 className="font-display text-xl font-semibold">What do you have at home?</h2>
+                <p className="text-sm text-muted-foreground">Tap everything available. Select at least one.</p>
+                <div className="flex flex-wrap gap-2">
+                  {EQUIPMENT_OPTIONS.map((item) => {
+                    const selected = equipment.includes(item.value);
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => toggleEquipment(item.value)}
+                        className={cn(
+                          "rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-foreground",
+                        )}
+                      >
+                        {selected ? <Check className="mr-1 inline h-4 w-4" /> : null}
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
 
-          <div className="space-y-2">
-            <Label>Training days</Label>
-            <div className="flex flex-wrap gap-2">
-              {DAYS_OF_WEEK.map((item) => (
-                <label
-                  key={item.value}
-                  className="flex min-w-[4.5rem] items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  <Checkbox
-                    checked={daysPerWeek.includes(item.value)}
-                    onCheckedChange={(checked) => toggleDay(item.value, checked === true)}
-                  />
-                  {item.label}
-                </label>
-              ))}
-            </div>
-          </div>
+            {step === 4 ? (
+              <>
+                <h2 className="font-display text-xl font-semibold">How long can you exercise?</h2>
+                <p className="text-sm text-muted-foreground">Minutes per session.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[10, 15, 20, 30, 45].map((value) => (
+                    <OptionButton
+                      key={value}
+                      label={`${value} min`}
+                      selected={minutesPerDay === value}
+                      onClick={() => setMinutesPerDay(value)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
 
-          <Button className="w-full" onClick={handleGenerate} disabled={isLoading}>
-            {isLoading ? "Loading exercises..." : "Generate plan"}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </section>
+            {step === 5 ? (
+              <>
+                <h2 className="font-display text-xl font-semibold">Which days work for you?</h2>
+                <p className="text-sm text-muted-foreground">Select at least one day.</p>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS_OF_WEEK.map((item) => {
+                    const selected = daysPerWeek.includes(item.value);
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => toggleDay(item.value)}
+                        className={cn(
+                          "min-w-[4.5rem] rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-foreground",
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
 
-        {plan && isPlanEmpty(plan) ? (
-          <section className="rounded-xl border border-dashed border-border p-6 text-center">
-            <p className="font-medium">No exercises matched your preferences</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Adjust your selections and try again, or browse the catalog.
-            </p>
-            <Link to="/exercises" className="mt-4 inline-block">
-              <Button variant="outline" size="sm">
-                Browse exercises
+            <div className="flex gap-3 pt-2">
+              {step > 1 ? (
+                <Button variant="outline" className="flex-1" onClick={handleBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              ) : null}
+              <Button
+                className="flex-1"
+                onClick={handleNext}
+                disabled={!canAdvance || (step === QUESTION_STEPS && exercisesLoading)}
+              >
+                {step === QUESTION_STEPS
+                  ? exercisesLoading
+                    ? "Loading..."
+                    : "See my plan"
+                  : "Next"}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </Link>
+            </div>
           </section>
         ) : null}
 
-        {planHasExercises ? (
+        {plan && isPlanEmpty(plan) ? (
+          <section className="rounded-xl border border-dashed border-border p-6 text-center">
+            <p className="font-medium">No exercises matched your answers</p>
+            <p className="mt-1 text-sm text-muted-foreground">Try again with different options.</p>
+            <Button className="mt-4" variant="outline" onClick={restart}>
+              Start over
+            </Button>
+          </section>
+        ) : null}
+
+        {plan && !isPlanEmpty(plan) ? (
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-lg font-semibold">Your weekly plan</h2>
               {user ? (
                 <Button size="sm" onClick={handleSave} disabled={saving}>
                   <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving..." : "Save plan"}
+                  {saving ? "Saving..." : "Save"}
                 </Button>
               ) : (
-                <Link to="/login" state={{ from: "/plan" }}>
-                  <Button size="sm" variant="outline">
-                    Sign in to save
-                  </Button>
-                </Link>
+                <Button size="sm" variant="outline" onClick={handleSave}>
+                  Sign in to save
+                </Button>
               )}
             </div>
 
@@ -289,16 +403,15 @@ const PlanBuilder = () => {
                         {exercise.setsReps ?? "Follow instructions"}
                         {exercise.durationMinutes ? ` · ${exercise.durationMinutes} min` : ""}
                       </p>
-                      {exercise.contraindications ? (
-                        <p className="mt-1 text-xs text-amber-700">
-                          Caution: {exercise.contraindications}
-                        </p>
-                      ) : null}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
+
+            <Button variant="outline" className="w-full" onClick={restart}>
+              Start over
+            </Button>
           </section>
         ) : null}
       </div>

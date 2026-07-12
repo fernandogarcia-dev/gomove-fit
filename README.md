@@ -14,10 +14,16 @@ Web app de exercícios personalizados em casa, focado em alívio de dores e bem-
 ## MVP features
 
 - Questionnaire-based weekly plan builder
-- Exercise catalog with filters
-- Saved plans for authenticated users
-- Weekly exercise completion tracking
-- Admin panel for exercise CRUD
+- Exercise catalog with filters, and a detail view (image, how-to description, video)
+- Saved plans for authenticated users, with the plan preserved across the sign-up flow
+- Weekly exercise completion tracking, with a one-tap "share progress" action
+- **GoMove PRO**: optional paid subscription (Stripe) that unlocks exercise demonstration
+  videos. Everything else in the app stays free — see "GoMove PRO / payments" below.
+- Referral program: inviting a friend grants free PRO days, no purchase required
+- Admin panel for exercise CRUD (name, instructions, benefits, image, video, etc.)
+
+See [`ROADMAP.md`](./ROADMAP.md) for what's planned next (native iOS/Android app, wearable
+integrations, etc.).
 
 ## Desenvolvimento local
 
@@ -91,6 +97,58 @@ Fluxo de trabalho:
 1. Desenvolva em branches de feature (`feature/nome-da-feature`)
 2. Abra PR para `preview` e valide no ambiente de preview do Vercel
 3. Quando estiver pronto, abra PR de `preview` → `main` para publicar em produção
+
+## GoMove PRO / payments
+
+GoMove PRO is a small, optional subscription (default: R$ 9,90/month or R$ 79/year — see
+`src/lib/pricing.ts`) that unlocks exercise demonstration videos. The plan builder, exercise
+catalog, and progress tracking stay free for everyone, forever. Payments are processed by
+**Stripe** and handled by three serverless functions in `api/`:
+
+| Function | Purpose |
+|---|---|
+| `api/create-checkout-session.ts` | Starts a Stripe Checkout session for the signed-in user |
+| `api/create-portal-session.ts` | Opens the Stripe customer portal so users can manage/cancel |
+| `api/stripe-webhook.ts` | Receives Stripe events and updates `public.subscriptions` |
+
+### One-time setup
+
+1. **Create a Stripe account**: [dashboard.stripe.com/register](https://dashboard.stripe.com/register)
+   (free, no monthly fees — Stripe only takes a % per transaction). Since you have a CNPJ,
+   register as a business account so you can accept international cards in multiple
+   currencies, not just BRL.
+2. **Create two recurring Prices** in Stripe Dashboard → Product catalog → Add product
+   ("GoMove PRO"): one monthly, one yearly, matching the amounts in `src/lib/pricing.ts` (or
+   your own — the numbers there are just UI copy, the Price objects are what actually charge).
+   Copy each Price ID (`price_...`).
+3. **Get your API keys**: Dashboard → Developers → API keys. Copy the **Secret key**
+   (`sk_live_...` in production, `sk_test_...` while testing).
+4. **Create the webhook**: Dashboard → Developers → Webhooks → Add endpoint.
+   - URL: `https://gomove.fit/api/stripe-webhook`
+   - Events to send: `checkout.session.completed`, `customer.subscription.created`,
+     `customer.subscription.updated`, `customer.subscription.deleted`
+   - Copy the **Signing secret** (`whsec_...`).
+5. **Set environment variables on Vercel** (Project Settings → Environment Variables,
+   Production + Preview): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`,
+   `STRIPE_PRICE_YEARLY`, and `SUPABASE_SERVICE_ROLE_KEY` (from Supabase → Settings → API —
+   this key must stay server-side only, it bypasses Row Level Security).
+6. Deploy. Test with a [Stripe test card](https://docs.stripe.com/testing) (`4242 4242 4242 4242`)
+   before switching to live keys.
+
+### Where the money lands
+
+Stripe deposits net proceeds (after their fee) to your linked bank account on Stripe's normal
+payout schedule (Dashboard → Settings → Payouts to configure the schedule and bank account).
+
+### How PRO access is tracked
+
+`public.subscriptions` (one row per user) is the source of truth, checked via the
+`public.is_pro(user_id)` SQL function and the `useSubscription()` hook. A user counts as PRO
+if either:
+- their Stripe subscription `status` is `active`/`trialing` (kept in sync by the webhook), or
+- `pro_until` is in the future (used for referral rewards / manual comps — see the
+  `subscriptions.provider = 'promo'` rows created by the referral trigger in
+  `supabase/migrations/20260712211000_add_referrals.sql`).
 
 ## Supabase
 

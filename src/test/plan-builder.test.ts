@@ -17,6 +17,7 @@ const mockExercise = (overrides: Partial<Exercise>): Exercise => ({
   benefits: overrides.benefits ?? null,
   contraindications: overrides.contraindications ?? null,
   image_url: null,
+  video_url: null,
   created_by: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

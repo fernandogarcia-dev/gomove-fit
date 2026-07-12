@@ -17,7 +17,13 @@ export type AnalyticsEvent =
   | "sign_up"
   | "plan_start"
   | "plan_save"
-  | "cta_click";
+  | "cta_click"
+  | "exercise_view"
+  | "pro_upsell_click"
+  | "checkout_start"
+  | "checkout_success"
+  | "referral_share"
+  | "progress_share";
 
 export const trackEvent = (
   name: AnalyticsEvent | string,
