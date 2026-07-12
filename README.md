@@ -1,6 +1,6 @@
 # GoMove
 
-Web app de exercícios personalizados com IA, focado em alívio de dores e bem-estar em casa.
+Web app de exercícios personalizados em casa, focado em alívio de dores e bem-estar.
 
 **Site:** [gomove.fit](https://gomove.fit)
 
@@ -10,6 +10,14 @@ Web app de exercícios personalizados com IA, focado em alívio de dores e bem-e
 - Tailwind CSS + shadcn/ui
 - Supabase (auth, database, storage)
 - Deploy: Vercel
+
+## MVP features
+
+- Questionnaire-based weekly plan builder
+- Exercise catalog with filters
+- Saved plans for authenticated users
+- Weekly exercise completion tracking
+- Admin panel for exercise CRUD
 
 ## Desenvolvimento local
 
@@ -33,39 +41,34 @@ O app roda em `http://localhost:8080`.
 | `VITE_SUPABASE_URL` | Vercel + local | URL do projeto Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Vercel + local | Chave anon/public do Supabase |
 | `VITE_SUPABASE_PROJECT_ID` | Vercel + local | ID do projeto Supabase |
+| `VITE_GTM_ID` | Opcional | Google Tag Manager |
+| `VITE_GA_MEASUREMENT_ID` | Opcional | GA4 (via GTM) |
+| `VITE_GOOGLE_SITE_VERIFICATION` | Opcional | Search Console |
 
 Obtenha os valores em: Supabase Dashboard → Project Settings → API.
 
-### Google (Analytics, Search Console, Ads)
+### Setup inicial (admin + seed)
 
-| Variável | Descrição |
-|---|---|
-| `VITE_GTM_ID` | Google Tag Manager container ID (hub central) |
-| `VITE_GA_MEASUREMENT_ID` | GA4 ID (referência; configure a tag no GTM) |
-| `VITE_GOOGLE_SITE_VERIFICATION` | Código meta do Search Console |
-| `VITE_GOOGLE_ADS_ID` | Google Ads conversion ID (`AW-...`) para campanhas futuras |
-| `VITE_GOOGLE_ADSENSE_CLIENT` | Publisher ID AdSense (`ca-pub-...`) |
-| `VITE_GOOGLE_ADSENSE_SLOT_*` | Slot IDs por posição (`hero`, `secondary`, `chat`) |
+1. Push das migrations (aplica catálogo inicial de exercícios, roles e backfill):
 
-#### Setup recomendado
-
-1. **Google Tag Manager** — crie um container em [tagmanager.google.com](https://tagmanager.google.com) e adicione `VITE_GTM_ID` no Vercel
-2. **GA4** — dentro do GTM, crie tag "Google Analytics: GA4 Configuration" com trigger "All Pages". O app envia `page_view` no dataLayer a cada navegação (SPA)
-3. **Search Console** — em [search.google.com/search-console](https://search.google.com/search-console), adicione `gomove.fit` e escolha verificação por meta tag. Copie o código para `VITE_GOOGLE_SITE_VERIFICATION`
-4. **Google Ads** (futuro) — no GTM, adicione tag "Google Ads Conversion Tracking" com `VITE_GOOGLE_ADS_ID`
-5. **AdSense** (futuro) — após aprovação, preencha `VITE_GOOGLE_ADSENSE_*` e atualize `public/ads.txt` com seu publisher ID
-
-#### Anúncios próprios (direct-sold)
-
-Edite `src/config/customAds.ts` para banners customizados por slot, sem depender do AdSense:
-
-```ts
-export const customAdSlots = {
-  hero: { imageUrl: "/ads/partner.webp", linkUrl: "https://partner.com", alt: "Partner" },
-};
+```sh
+npx supabase db push
 ```
 
-Prioridade por slot: **custom ad** > **AdSense** > **placeholder**.
+2. **Desative confirmação de email** no Supabase Dashboard (recomendado para MVP):
+   Authentication → Providers → Email → **Confirm email OFF**
+
+3. Crie ou atualize o usuário admin localmente (requer service role key):
+
+```sh
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+export ADMIN_EMAIL=fernando.garcia@backlinetalent.com
+export ADMIN_PASSWORD=your_secure_password
+npm run setup:admin
+npm run setup:seed
+```
+
+O email `fernando.garcia@backlinetalent.com` também recebe role `admin` automaticamente ao se cadastrar via `/login`.
 
 ## Build
 
@@ -89,21 +92,6 @@ Fluxo de trabalho:
 2. Abra PR para `preview` e valide no ambiente de preview do Vercel
 3. Quando estiver pronto, abra PR de `preview` → `main` para publicar em produção
 
-No Vercel, configure:
-
-- **Production Branch:** `main` (domínio `gomove.fit`)
-- **Preview Branch:** `preview` (URL de preview do Vercel)
-
-### Configuração inicial
-
-1. Importe o repositório GitHub no Vercel
-2. Framework Preset: **Vite**
-3. Root Directory: `./`
-4. Build Command: `npm run build`
-5. Output Directory: `dist`
-6. Adicione as variáveis `VITE_*` (ou use a integração Supabase → Vercel com prefixo `VITE_`)
-7. Conecte o domínio `gomove.fit` à branch `main` em Project Settings → Domains
-
 ## Supabase
 
 As migrations ficam em `supabase/migrations/`. Com a integração GitHub do Supabase ativa, migrations são aplicadas automaticamente ao fazer merge/push na branch `main`.
@@ -124,3 +112,4 @@ npx supabase db push
 | `npm run preview` | Preview do build |
 | `npm run lint` | ESLint |
 | `npm run test` | Testes (Vitest) |
+| `node scripts/setup-admin.mjs` | Cria/atualiza usuário admin |

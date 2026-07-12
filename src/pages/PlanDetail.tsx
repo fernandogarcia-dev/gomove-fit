@@ -1,0 +1,219 @@
+import { useMemo } from "react";
+import { Link, useParams } from "react-router-dom";
+import AppShell from "@/components/AppShell";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { DAYS_OF_WEEK } from "@/lib/constants";
+import { getWeekStart, type PlanData } from "@/lib/plan-builder";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+const PlanDetailContent = () => {
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const weekStart = getWeekStart();
+
+  const { data: plan, isLoading } = useQuery({
+    queryKey: ["saved-plan", id],
+    enabled: Boolean(id && user),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_plans")
+        .select("*")
+        .eq("id", id!)
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: tracking = [] } = useQuery({
+    queryKey: ["exercise-tracking", id, weekStart],
+    enabled: Boolean(id && user),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exercise_tracking")
+        .select("*")
+        .eq("plan_id", id!)
+        .eq("user_id", user!.id)
+        .eq("week_start", weekStart);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({
+      exerciseId,
+      dayOfWeek,
+      completed,
+    }: {
+      exerciseId: string;
+      dayOfWeek: number;
+      completed: boolean;
+    }) => {
+      const existing = tracking.find(
+        (item) => item.exercise_id === exerciseId && item.day_of_week === dayOfWeek,
+      );
+
+      if (completed && existing) {
+        const { error } = await supabase
+          .from("exercise_tracking")
+          .update({ completed_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+        return;
+      }
+
+      if (!completed && existing) {
+        const { error } = await supabase.from("exercise_tracking").delete().eq("id", existing.id);
+        if (error) throw error;
+        return;
+      }
+
+      if (completed) {
+        const { error } = await supabase.from("exercise_tracking").insert({
+          user_id: user!.id,
+          plan_id: id!,
+          exercise_id: exerciseId,
+          day_of_week: dayOfWeek,
+          week_start: weekStart,
+          completed_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercise-tracking", id, weekStart] });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Could not update progress",
+        description: error instanceof Error ? error.message : "Unexpected error",
+      });
+    },
+  });
+
+  const planData = plan?.plan_data as PlanData | undefined;
+
+  const completedCount = useMemo(
+    () => tracking.filter((item) => item.completed_at).length,
+    [tracking],
+  );
+
+  const totalExercises = useMemo(
+    () => planData?.schedule.reduce((sum, day) => sum + day.exercises.length, 0) ?? 0,
+    [planData],
+  );
+
+  if (isLoading) {
+    return (
+      <AppShell title="Plan" showBack backTo="/plans">
+        <p className="text-sm text-muted-foreground">Loading plan...</p>
+      </AppShell>
+    );
+  }
+
+  if (!plan || !planData) {
+    return (
+      <AppShell title="Plan" showBack backTo="/plans">
+        <p className="text-sm text-muted-foreground">Plan not found.</p>
+        <Link to="/plans" className="mt-4 inline-block">
+          <Button variant="outline">Back to my plans</Button>
+        </Link>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title={plan.title} showBack backTo="/plans">
+      <div className="mb-4 rounded-xl border border-border bg-card p-4">
+        <p className="text-sm text-muted-foreground">This week</p>
+        <p className="font-display text-2xl font-bold">
+          {completedCount}/{totalExercises}
+        </p>
+        <p className="text-sm text-muted-foreground">exercises completed</p>
+      </div>
+
+      <div className="space-y-4">
+        {planData.schedule.map((day) => (
+          <section key={day.dayOfWeek} className="rounded-xl border border-border bg-card p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-medium">
+                {DAYS_OF_WEEK.find((item) => item.value === day.dayOfWeek)?.label}
+              </h2>
+              <Badge variant="secondary">{day.exercises.length} exercises</Badge>
+            </div>
+
+            {day.exercises.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No exercises scheduled.</p>
+            ) : (
+              <ul className="space-y-3">
+                {day.exercises.map((exercise) => {
+                  const isCompleted = tracking.some(
+                    (item) =>
+                      item.exercise_id === exercise.exerciseId &&
+                      item.day_of_week === day.dayOfWeek &&
+                      item.completed_at,
+                  );
+
+                  return (
+                    <li
+                      key={`${day.dayOfWeek}-${exercise.exerciseId}`}
+                      className="flex items-start gap-3 rounded-lg bg-muted/40 p-3"
+                    >
+                      <Checkbox
+                        checked={isCompleted}
+                        disabled={toggleMutation.isPending}
+                        onCheckedChange={(checked) =>
+                          toggleMutation.mutate({
+                            exerciseId: exercise.exerciseId,
+                            dayOfWeek: day.dayOfWeek,
+                            completed: checked === true,
+                          })
+                        }
+                        className="mt-1"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={
+                            isCompleted ? "font-medium line-through opacity-60" : "font-medium"
+                          }
+                        >
+                          {exercise.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {exercise.setsReps ?? "Follow instructions"}
+                          {exercise.durationMinutes ? ` · ${exercise.durationMinutes} min` : ""}
+                        </p>
+                        {exercise.instructions ? (
+                          <p className="mt-1 text-sm leading-relaxed">{exercise.instructions}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
+    </AppShell>
+  );
+};
+
+const PlanDetail = () => (
+  <ProtectedRoute>
+    <PlanDetailContent />
+  </ProtectedRoute>
+);
+
+export default PlanDetail;

@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "setup:admin": "node scripts/setup-admin.mjs",
+    "setup:seed": "node scripts/seed-exercises.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

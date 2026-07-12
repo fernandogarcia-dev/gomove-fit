@@ -15,7 +15,7 @@ export const trackPageView = (path: string, title = document.title): void => {
 export type AnalyticsEvent =
   | "login"
   | "sign_up"
-  | "chat_start"
+  | "plan_start"
   | "plan_save"
   | "cta_click";
 
@@ -25,17 +25,6 @@ export const trackEvent = (
 ): void => {
   pushToDataLayer({
     event: name,
-    ...params,
-  });
-};
-
-export const trackConversion = (
-  conversionLabel: string,
-  params: Record<string, unknown> = {},
-): void => {
-  pushToDataLayer({
-    event: "conversion",
-    send_to: conversionLabel,
     ...params,
   });
 };
