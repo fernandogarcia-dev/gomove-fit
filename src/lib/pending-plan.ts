@@ -5,18 +5,15 @@ const STORAGE_KEY = "gomove:pending_plan";
 
 type PendingPlan = {
   plan: PlanData;
-  bodyRegion: BodyRegion;
+  bodyRegions: BodyRegion[];
 };
 
-/**
- * Keeps a generated-but-unsaved plan around across the sign-in/sign-up redirect,
- * so users never have to redo the questionnaire just to create an account.
- */
+/** Keeps a generated-but-unsaved plan across the sign-in/sign-up redirect. */
 export const savePendingPlan = (pending: PendingPlan): void => {
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pending));
   } catch {
-    // sessionStorage may be unavailable (private mode) — safe to ignore, worst case user redoes the flow
+    // sessionStorage may be unavailable in private mode
   }
 };
 
@@ -24,7 +21,12 @@ export const loadPendingPlan = (): PendingPlan | null => {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as PendingPlan;
+    const parsed = JSON.parse(raw) as PendingPlan & { bodyRegion?: BodyRegion };
+    if (parsed.bodyRegions?.length) return parsed;
+    if (parsed.bodyRegion) {
+      return { plan: parsed.plan, bodyRegions: [parsed.bodyRegion] };
+    }
+    return null;
   } catch {
     return null;
   }

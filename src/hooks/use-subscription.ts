@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { isMissingTableError, withTimeout } from "@/lib/query-utils";
 
 export type SubscriptionInfo = {
   plan: "free" | "pro";
@@ -26,13 +27,20 @@ export const useSubscription = () => {
     queryKey: ["subscription", user?.id],
     enabled: Boolean(user),
     queryFn: async (): Promise<SubscriptionInfo> => {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("plan, status, pro_until, current_period_end")
-        .eq("user_id", user!.id)
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase
+          .from("subscriptions")
+          .select("plan, status, pro_until, current_period_end")
+          .eq("user_id", user!.id)
+          .maybeSingle(),
+        8_000,
+        "Subscription status",
+      );
 
-      if (error) throw error;
+      if (error) {
+        if (isMissingTableError(error)) return FREE_INFO;
+        throw error;
+      }
       if (!data) return FREE_INFO;
 
       const proUntilActive = data.pro_until ? new Date(data.pro_until) > new Date() : false;
@@ -47,6 +55,7 @@ export const useSubscription = () => {
       };
     },
     staleTime: 60_000,
+    retry: 1,
   });
 
   return {

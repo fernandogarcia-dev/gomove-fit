@@ -14,6 +14,7 @@ import { DAYS_OF_WEEK } from "@/lib/constants";
 import { getWeekStart, type PlanData } from "@/lib/plan-builder";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics/events";
+import { withTimeout } from "@/lib/query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const PlanDetailContent = () => {
@@ -28,30 +29,35 @@ const PlanDetailContent = () => {
     queryKey: ["saved-plan", id],
     enabled: Boolean(id && user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("id", id!)
-        .eq("user_id", user!.id)
-        .single();
+      const { data, error } = await withTimeout(
+        supabase.from("saved_plans").select("*").eq("id", id!).eq("user_id", user!.id).single(),
+        10_000,
+        "Plan detail",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   const { data: tracking = [] } = useQuery({
     queryKey: ["exercise-tracking", id, weekStart],
     enabled: Boolean(id && user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exercise_tracking")
-        .select("*")
-        .eq("plan_id", id!)
-        .eq("user_id", user!.id)
-        .eq("week_start", weekStart);
+      const { data, error } = await withTimeout(
+        supabase
+          .from("exercise_tracking")
+          .select("*")
+          .eq("plan_id", id!)
+          .eq("user_id", user!.id)
+          .eq("week_start", weekStart),
+        10_000,
+        "Exercise tracking",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   const toggleMutation = useMutation({

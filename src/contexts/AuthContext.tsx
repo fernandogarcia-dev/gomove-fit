@@ -9,6 +9,8 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_EMAILS } from "@/lib/constants";
+import { withTimeout } from "@/lib/query-utils";
 
 type AuthContextValue = {
   session: Session | null;
@@ -21,26 +23,34 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const AUTH_INIT_TIMEOUT_MS = 5000;
+const AUTH_INIT_TIMEOUT_MS = 8000;
+const QUERY_TIMEOUT_MS = 8000;
+
+const isAdminEmail = (email: string | undefined): boolean =>
+  Boolean(email && ADMIN_EMAILS.some((item) => item.toLowerCase() === email.toLowerCase()));
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadAdminRole = useCallback(async (userId: string | undefined) => {
-    if (!userId) {
+  const loadAdminRole = useCallback(async (user: User | null | undefined) => {
+    if (!user?.id) {
       setIsAdmin(false);
       return;
     }
 
+    if (isAdminEmail(user.email)) {
+      setIsAdmin(true);
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        QUERY_TIMEOUT_MS,
+        "Admin role check",
+      );
 
       if (error) {
         console.error("Failed to load admin role", error);
@@ -56,8 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const refreshRole = useCallback(async () => {
-    await loadAdminRole(session?.user.id);
-  }, [loadAdminRole, session?.user.id]);
+    await loadAdminRole(session?.user ?? null);
+  }, [loadAdminRole, session?.user]);
 
   useEffect(() => {
     let mounted = true;
@@ -70,26 +80,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const init = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          QUERY_TIMEOUT_MS,
+          "Auth session",
+        );
         if (error) console.error("Failed to get session", error);
         if (!mounted) return;
         setSession(data.session ?? null);
-        await loadAdminRole(data.session?.user.id);
+        await loadAdminRole(data.session?.user ?? null);
       } catch (error) {
         console.error("Auth init failed", error);
+        if (mounted) setSession(null);
       } finally {
         window.clearTimeout(timeoutId);
         finishLoading();
       }
     };
 
-    init();
+    void init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      await loadAdminRole(nextSession?.user.id);
+      void loadAdminRole(nextSession?.user ?? null);
       finishLoading();
     });
 
@@ -101,8 +116,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [loadAdminRole]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    setSession(null);
     setIsAdmin(false);
+    setLoading(false);
+
+    try {
+      await withTimeout(
+        supabase.auth.signOut({ scope: "local" }),
+        QUERY_TIMEOUT_MS,
+        "Sign out",
+      );
+    } catch (error) {
+      console.error("Sign out failed", error);
+      localStorage.removeItem(`sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`);
+    }
   }, []);
 
   const value = useMemo(

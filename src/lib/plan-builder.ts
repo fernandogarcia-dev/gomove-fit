@@ -4,10 +4,11 @@ import type { BodyRegion, Difficulty, Equipment } from "@/lib/constants";
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
 
 export type PlanPreferences = {
-  bodyRegion: BodyRegion;
+  bodyRegions: BodyRegion[];
   difficulty: Difficulty;
   equipment: Equipment[];
-  minutesPerDay: number;
+  minutesMin: number;
+  minutesMax: number;
   daysPerWeek: number[];
 };
 
@@ -23,6 +24,7 @@ export type PlanExercise = {
 export type PlanDay = {
   dayOfWeek: number;
   exercises: PlanExercise[];
+  targetMinutes: number;
 };
 
 export type PlanData = {
@@ -37,8 +39,8 @@ const DIFFICULTY_RANK: Record<Difficulty, number> = {
   avancado: 3,
 };
 
-const matchesBodyRegion = (exercise: Exercise, region: BodyRegion): boolean =>
-  exercise.body_region === region;
+const matchesBodyRegions = (exercise: Exercise, regions: BodyRegion[]): boolean =>
+  regions.includes(exercise.body_region as BodyRegion);
 
 const matchesDifficulty = (exercise: Exercise, difficulty: Difficulty): boolean =>
   DIFFICULTY_RANK[exercise.difficulty as Difficulty] <= DIFFICULTY_RANK[difficulty];
@@ -58,7 +60,7 @@ export const filterExercises = (
   exercises
     .filter(
       (exercise) =>
-        matchesBodyRegion(exercise, preferences.bodyRegion) &&
+        matchesBodyRegions(exercise, preferences.bodyRegions) &&
         matchesDifficulty(exercise, preferences.difficulty) &&
         matchesEquipment(exercise, preferences.equipment),
     )
@@ -67,15 +69,24 @@ export const filterExercises = (
 export const isPlanEmpty = (plan: PlanData): boolean =>
   plan.schedule.every((day) => day.exercises.length === 0);
 
+/** Pick a per-day time budget inside the user's min/max range (varies by day index). */
+export const pickDayMinutes = (min: number, max: number, dayIndex: number): number => {
+  if (min >= max) return min;
+  const span = max - min;
+  const step = Math.max(1, Math.round(span / 2));
+  return min + ((dayIndex * step) % (span + 1));
+};
+
 export const buildWeeklyPlan = (
   exercises: Exercise[],
   preferences: PlanPreferences,
 ): PlanData => {
   const matched = filterExercises(exercises, preferences);
   const days = [...preferences.daysPerWeek].sort((a, b) => a - b);
-  const schedule: PlanDay[] = days.map((dayOfWeek) => ({
+  const schedule: PlanDay[] = days.map((dayOfWeek, index) => ({
     dayOfWeek,
     exercises: [],
+    targetMinutes: pickDayMinutes(preferences.minutesMin, preferences.minutesMax, index),
   }));
 
   if (matched.length === 0 || schedule.length === 0) {
@@ -93,16 +104,16 @@ export const buildWeeklyPlan = (
     let attempts = 0;
 
     while (
-      minutesUsed < preferences.minutesPerDay &&
+      minutesUsed < day.targetMinutes &&
       attempts < maxAttempts &&
-      day.exercises.length < 4
+      day.exercises.length < 5
     ) {
       const exercise = matched[exerciseIndex % matched.length];
       exerciseIndex += 1;
       attempts += 1;
 
       const duration = exercise.duration_minutes ?? 10;
-      if (minutesUsed + duration > preferences.minutesPerDay && day.exercises.length > 0) {
+      if (minutesUsed + duration > day.targetMinutes && day.exercises.length > 0) {
         continue;
       }
 
@@ -138,3 +149,9 @@ export const getWeekStart = (date = new Date()): string => {
   const dayOfMonth = String(copy.getDate()).padStart(2, "0");
   return `${year}-${month}-${dayOfMonth}`;
 };
+
+export const formatBodyRegions = (regions: BodyRegion[]): string =>
+  regions.length === 0 ? "Custom" : regions.join(", ");
+
+export const formatTimeRange = (min: number, max: number): string =>
+  min === max ? `${min} min` : `${min}–${max} min`;

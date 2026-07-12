@@ -19,13 +19,21 @@ import {
   type Difficulty,
   type Equipment,
 } from "@/lib/constants";
-import { buildWeeklyPlan, isPlanEmpty, type PlanData } from "@/lib/plan-builder";
+import {
+  buildWeeklyPlan,
+  formatBodyRegions,
+  formatTimeRange,
+  isPlanEmpty,
+  type PlanData,
+} from "@/lib/plan-builder";
 import type { Json } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
+import { withTimeout } from "@/lib/query-utils";
 import { clearPendingPlan, loadPendingPlan, savePendingPlan } from "@/lib/pending-plan";
 
 const QUESTION_STEPS = 5;
 const defaultDays = [1, 3, 5];
+const MINUTE_OPTIONS = [10, 15, 20, 30, 45] as const;
 
 type OptionProps = {
   label: string;
@@ -59,16 +67,29 @@ const PlanBuilder = () => {
   const pendingPlan = useMemo(() => loadPendingPlan(), []);
 
   const [step, setStep] = useState(1);
-  const [bodyRegion, setBodyRegion] = useState<BodyRegion | null>(pendingPlan?.bodyRegion ?? null);
+  const [bodyRegions, setBodyRegions] = useState<BodyRegion[]>(
+    pendingPlan?.bodyRegions ?? [],
+  );
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [equipment, setEquipment] = useState<Equipment[]>(["none"]);
-  const [minutesPerDay, setMinutesPerDay] = useState<number | null>(null);
+  const [minutesMin, setMinutesMin] = useState<number>(15);
+  const [minutesMax, setMinutesMax] = useState<number>(30);
   const [daysPerWeek, setDaysPerWeek] = useState<number[]>(defaultDays);
   const [plan, setPlan] = useState<PlanData | null>(pendingPlan?.plan ?? null);
   const [saving, setSaving] = useState(false);
   const autoSaveAttempted = useRef(false);
 
   const progressValue = plan ? 100 : (step / QUESTION_STEPS) * 100;
+
+  const toggleBodyRegion = (value: BodyRegion) => {
+    setBodyRegions((current) => {
+      if (current.includes(value)) {
+        const next = current.filter((item) => item !== value);
+        return next;
+      }
+      return [...current, value];
+    });
+  };
 
   const toggleEquipment = (value: Equipment) => {
     setEquipment((current) => {
@@ -93,29 +114,30 @@ const PlanBuilder = () => {
   const canAdvance = useMemo(() => {
     switch (step) {
       case 1:
-        return bodyRegion !== null;
+        return bodyRegions.length > 0;
       case 2:
         return difficulty !== null;
       case 3:
         return equipment.length > 0;
       case 4:
-        return minutesPerDay !== null;
+        return minutesMin <= minutesMax;
       case 5:
         return daysPerWeek.length > 0;
       default:
         return false;
     }
-  }, [step, bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek]);
+  }, [step, bodyRegions, difficulty, equipment, minutesMin, minutesMax, daysPerWeek]);
 
   const generatePlan = useCallback(() => {
-    if (!bodyRegion || !difficulty || minutesPerDay === null) return;
+    if (!bodyRegions.length || !difficulty) return;
 
     trackEvent("plan_start");
     const preferences = {
-      bodyRegion,
+      bodyRegions,
       difficulty,
       equipment,
-      minutesPerDay,
+      minutesMin,
+      minutesMax,
       daysPerWeek,
     };
     const generated = buildWeeklyPlan(exercises, preferences);
@@ -128,7 +150,7 @@ const PlanBuilder = () => {
         description: "Try different options or browse the catalog.",
       });
     }
-  }, [bodyRegion, difficulty, equipment, minutesPerDay, daysPerWeek, exercises, toast]);
+  }, [bodyRegions, difficulty, equipment, minutesMin, minutesMax, daysPerWeek, exercises, toast]);
 
   const handleNext = () => {
     if (step < QUESTION_STEPS) {
@@ -159,26 +181,33 @@ const PlanBuilder = () => {
   };
 
   const handleSave = useCallback(async () => {
-    if (!plan || isPlanEmpty(plan) || !bodyRegion) return;
+    if (!plan || isPlanEmpty(plan) || bodyRegions.length === 0) return;
 
     if (!user) {
-      // Keep the generated plan so it survives the sign-in/sign-up round trip.
-      savePendingPlan({ plan, bodyRegion });
+      savePendingPlan({ plan, bodyRegions });
       navigate("/login", { state: { from: "/plan" } });
       return;
     }
 
     setSaving(true);
     try {
-      const { data, error } = await supabase
-        .from("saved_plans")
-        .insert({
-          user_id: user.id,
-          title: `${BODY_REGIONS.find((item) => item.value === bodyRegion)?.label ?? "Custom"} plan`,
-          plan_data: plan as unknown as Json,
-        })
-        .select("id")
-        .single();
+      const regionLabels = bodyRegions
+        .map((value) => BODY_REGIONS.find((item) => item.value === value)?.label ?? value)
+        .join(" + ");
+
+      const { data, error } = await withTimeout(
+        supabase
+          .from("saved_plans")
+          .insert({
+            user_id: user.id,
+            title: `${regionLabels} plan`,
+            plan_data: plan as unknown as Json,
+          })
+          .select("id")
+          .single(),
+        12_000,
+        "Save plan",
+      );
 
       if (error) throw error;
       clearPendingPlan();
@@ -194,31 +223,29 @@ const PlanBuilder = () => {
     } finally {
       setSaving(false);
     }
-  }, [plan, bodyRegion, user, navigate, toast]);
+  }, [plan, bodyRegions, user, navigate, toast]);
 
-  // If the user just signed in/up after building a plan, save it automatically —
-  // no need to click "Save" again and lose momentum.
   useEffect(() => {
-    if (user && pendingPlan && !autoSaveAttempted.current) {
+    if (user && plan && pendingPlan && !autoSaveAttempted.current && !isPlanEmpty(plan)) {
       autoSaveAttempted.current = true;
-      handleSave();
+      void handleSave();
     }
-  }, [user, pendingPlan, handleSave]);
+  }, [user, plan, pendingPlan, handleSave]);
 
   const restart = () => {
     clearPendingPlan();
+    autoSaveAttempted.current = false;
     setPlan(null);
     setStep(1);
-    setBodyRegion(null);
+    setBodyRegions([]);
     setDifficulty(null);
     setEquipment(["none"]);
-    setMinutesPerDay(null);
+    setMinutesMin(15);
+    setMinutesMax(30);
     setDaysPerWeek(defaultDays);
   };
 
-  const stepLabel = plan
-    ? "Your plan is ready"
-    : `Step ${step} of ${QUESTION_STEPS}`;
+  const stepLabel = plan ? "Your plan is ready" : `Step ${step} of ${QUESTION_STEPS}`;
 
   return (
     <AppShell title="Build your plan" showBack backTo="/">
@@ -238,16 +265,29 @@ const PlanBuilder = () => {
             {step === 1 ? (
               <>
                 <h2 className="font-display text-xl font-semibold">Where do you feel discomfort?</h2>
-                <p className="text-sm text-muted-foreground">Pick the area you want to focus on.</p>
-                <div className="grid gap-2">
-                  {BODY_REGIONS.map((item) => (
-                    <OptionButton
-                      key={item.value}
-                      label={item.label}
-                      selected={bodyRegion === item.value}
-                      onClick={() => setBodyRegion(item.value)}
-                    />
-                  ))}
+                <p className="text-sm text-muted-foreground">
+                  Select every area you want to work on. You can pick more than one.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {BODY_REGIONS.map((item) => {
+                    const selected = bodyRegions.includes(item.value);
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => toggleBodyRegion(item.value)}
+                        className={cn(
+                          "rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-foreground",
+                        )}
+                      >
+                        {selected ? <Check className="mr-1 inline h-4 w-4" /> : null}
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             ) : null}
@@ -284,8 +324,8 @@ const PlanBuilder = () => {
                         className={cn(
                           "rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors",
                           selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-card text-foreground",
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-card text-foreground",
                         )}
                       >
                         {selected ? <Check className="mr-1 inline h-4 w-4" /> : null}
@@ -300,17 +340,50 @@ const PlanBuilder = () => {
             {step === 4 ? (
               <>
                 <h2 className="font-display text-xl font-semibold">How long can you exercise?</h2>
-                <p className="text-sm text-muted-foreground">Minutes per session.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[10, 15, 20, 30, 45].map((value) => (
-                    <OptionButton
-                      key={value}
-                      label={`${value} min`}
-                      selected={minutesPerDay === value}
-                      onClick={() => setMinutesPerDay(value)}
-                    />
-                  ))}
+                <p className="text-sm text-muted-foreground">
+                  Pick a time range. Some days you may have more or less time — we&apos;ll vary your plan within this range.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Minimum (short days)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {MINUTE_OPTIONS.map((value) => (
+                        <OptionButton
+                          key={`min-${value}`}
+                          label={`${value} min`}
+                          selected={minutesMin === value}
+                          onClick={() => {
+                            setMinutesMin(value);
+                            if (value > minutesMax) setMinutesMax(value);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Maximum (long days)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {MINUTE_OPTIONS.map((value) => (
+                        <OptionButton
+                          key={`max-${value}`}
+                          label={`${value} min`}
+                          selected={minutesMax === value}
+                          onClick={() => {
+                            setMinutesMax(value);
+                            if (value < minutesMin) setMinutesMin(value);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  Your sessions will land between{" "}
+                  <span className="font-medium text-foreground">
+                    {formatTimeRange(minutesMin, minutesMax)}
+                  </span>{" "}
+                  depending on the day.
+                </p>
               </>
             ) : null}
 
@@ -377,7 +450,12 @@ const PlanBuilder = () => {
         {plan && !isPlanEmpty(plan) ? (
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold">Your weekly plan</h2>
+              <div>
+                <h2 className="font-display text-lg font-semibold">Your weekly plan</h2>
+                <p className="text-xs text-muted-foreground">
+                  {formatBodyRegions(bodyRegions)} · {formatTimeRange(minutesMin, minutesMax)}
+                </p>
+              </div>
               {user ? (
                 <Button size="sm" onClick={handleSave} disabled={saving}>
                   <Save className="mr-2 h-4 w-4" />
@@ -392,9 +470,10 @@ const PlanBuilder = () => {
 
             {plan.schedule.map((day) => (
               <div key={day.dayOfWeek} className="rounded-xl border border-border bg-card p-4">
-                <h3 className="mb-3 font-medium">
+                <h3 className="mb-1 font-medium">
                   {DAYS_OF_WEEK.find((item) => item.value === day.dayOfWeek)?.label}
                 </h3>
+                <p className="mb-3 text-xs text-muted-foreground">~{day.targetMinutes} min session</p>
                 <ul className="space-y-3">
                   {day.exercises.map((exercise) => (
                     <li key={exercise.exerciseId} className="rounded-lg bg-muted/40 p-3">

@@ -1,12 +1,13 @@
-import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, ChevronRight, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { PlanData } from "@/lib/plan-builder";
-import { useQuery } from "@tanstack/react-query";
+import { withTimeout } from "@/lib/query-utils";
 
 const MyPlansContent = () => {
   const { user } = useAuth();
@@ -15,14 +16,19 @@ const MyPlansContent = () => {
     queryKey: ["saved-plans", user?.id],
     enabled: Boolean(user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from("saved_plans")
+          .select("*")
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false }),
+        10_000,
+        "Saved plans",
+      );
       if (error) throw error;
       return data;
     },
+    retry: 1,
   });
 
   return (
