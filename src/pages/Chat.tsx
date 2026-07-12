@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Dumbbell, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
+import GoMoveLogo from "@/components/GoMoveLogo";
 
 const Chat = () => {
   return (
@@ -14,12 +15,7 @@ const Chat = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-              <Dumbbell className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-semibold text-foreground">MoveAí</span>
-          </div>
+          <GoMoveLogo variant="full" className="h-7" />
         </div>
       </header>
 

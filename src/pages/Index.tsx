@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import AdBanner from "@/components/AdBanner";
 import GoogleTranslate from "@/components/GoogleTranslate";
+import GoMoveLogo from "@/components/GoMoveLogo";
 
 const features = [
   {
@@ -35,14 +36,7 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Dumbbell className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">
-              MoveAí
-            </span>
-          </Link>
+          <GoMoveLogo variant="full" className="h-9" />
 
           <div className="flex items-center gap-3">
             <GoogleTranslate />
@@ -122,7 +116,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border bg-muted/30 py-8">
         <div className="container text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} MoveAí. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} GoMove. Todos os direitos reservados.</p>
           <p className="mt-1">
             Este app não substitui avaliação profissional. Consulte um médico ou fisioterapeuta.
           </p>

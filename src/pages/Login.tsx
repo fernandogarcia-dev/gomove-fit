@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Dumbbell, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import GoMoveLogo from "@/components/GoMoveLogo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,11 +37,11 @@ const Login = () => {
         if (error) throw error;
         navigate("/");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
       });
     } finally {
       setLoading(false);
@@ -56,9 +57,7 @@ const Login = () => {
             <span className="text-sm text-muted-foreground">Voltar</span>
           </Link>
           <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-              <Dumbbell className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <GoMoveLogo variant="icon" to={undefined} className="h-12 w-12" />
           </div>
           <h1 className="font-display text-2xl font-bold text-foreground">
             {isSignUp ? "Criar conta" : "Entrar"}

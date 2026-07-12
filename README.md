@@ -1,73 +1,73 @@
-# Welcome to your Lovable project
+# GoMove
 
-## Project info
+Web app de exercícios personalizados com IA, focado em alívio de dores e bem-estar em casa.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Site:** [gomove.fit](https://gomove.fit)
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+- React + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (auth, database, storage)
+- Deploy: Vercel
 
-**Use Lovable**
+## Desenvolvimento local
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requisitos: Node.js 18+ e npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/fernandogarcia-dev/gomove-fit.git
+cd gomove-fit
+npm install
+cp .env.example .env
+# Edite .env com as credenciais do seu projeto Supabase
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O app roda em `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Variáveis de ambiente
 
-**Use GitHub Codespaces**
+| Variável | Onde usar | Descrição |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Vercel + local | URL do projeto Supabase |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Vercel + local | Chave anon/public do Supabase |
+| `VITE_SUPABASE_PROJECT_ID` | Vercel + local | ID do projeto Supabase |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Obtenha os valores em: Supabase Dashboard → Project Settings → API.
 
-## What technologies are used for this project?
+## Build
 
-This project is built with:
+```sh
+npm run build
+npm run preview
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Deploy (Vercel)
 
-## How can I deploy this project?
+1. Importe o repositório GitHub no Vercel
+2. Framework Preset: **Vite**
+3. Root Directory: `./`
+4. Build Command: `npm run build`
+5. Output Directory: `dist`
+6. Adicione as variáveis `VITE_SUPABASE_*` em Environment Variables
+7. Conecte o domínio `gomove.fit` em Project Settings → Domains
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Supabase
 
-## Can I connect a custom domain to my Lovable project?
+As migrations ficam em `supabase/migrations/`. Para aplicar no seu projeto:
 
-Yes, you can!
+```sh
+npx supabase link --project-ref YOUR_PROJECT_ID
+npx supabase db push
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Scripts
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+| Comando | Descrição |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run preview` | Preview do build |
+| `npm run lint` | ESLint |
+| `npm run test` | Testes (Vitest) |
