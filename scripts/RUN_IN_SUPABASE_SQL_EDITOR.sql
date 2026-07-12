@@ -151,6 +151,25 @@ UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/sit-to-sta
 UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/march-in-place.webp' WHERE name = 'March in place';
 UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/bodyweight-squat.webp' WHERE name = 'Bodyweight squat';
 
+-- Repair any URLs written by a local admin session and use the canonical production host.
+UPDATE public.exercises
+SET image_url = regexp_replace(
+  image_url,
+  '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?',
+  'https://www.gomove.fit',
+  'i'
+)
+WHERE image_url ~* '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?/';
+
+UPDATE public.exercises
+SET image_url = regexp_replace(
+  image_url,
+  '^https://gomove\.fit/',
+  'https://www.gomove.fit/',
+  'i'
+)
+WHERE image_url ~* '^https://gomove\.fit/';
+
 -- Admin account: admin@gomove.fit (rename from legacy email if it exists)
 UPDATE auth.users
 SET email = 'admin@gomove.fit',
