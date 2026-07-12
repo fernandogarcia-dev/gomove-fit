@@ -31,7 +31,7 @@ O app roda em `http://localhost:8080`.
 | Variável | Onde usar | Descrição |
 |---|---|---|
 | `VITE_SUPABASE_URL` | Vercel + local | URL do projeto Supabase |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Vercel + local | Chave anon/public do Supabase |
+| `VITE_SUPABASE_ANON_KEY` | Vercel + local | Chave anon/public do Supabase |
 | `VITE_SUPABASE_PROJECT_ID` | Vercel + local | ID do projeto Supabase |
 
 Obtenha os valores em: Supabase Dashboard → Project Settings → API.
@@ -45,17 +45,39 @@ npm run preview
 
 ## Deploy (Vercel)
 
+### Branches e ambientes
+
+| Branch | Ambiente | URL |
+|---|---|---|
+| `main` | **Produção** | [gomove.fit](https://gomove.fit) |
+| `preview` | **Preview** | URL automática do Vercel (`*.vercel.app`) |
+
+Fluxo de trabalho:
+
+1. Desenvolva em branches de feature (`feature/nome-da-feature`)
+2. Abra PR para `preview` e valide no ambiente de preview do Vercel
+3. Quando estiver pronto, abra PR de `preview` → `main` para publicar em produção
+
+No Vercel, configure:
+
+- **Production Branch:** `main` (domínio `gomove.fit`)
+- **Preview Branch:** `preview` (URL de preview do Vercel)
+
+### Configuração inicial
+
 1. Importe o repositório GitHub no Vercel
 2. Framework Preset: **Vite**
 3. Root Directory: `./`
 4. Build Command: `npm run build`
 5. Output Directory: `dist`
-6. Adicione as variáveis `VITE_SUPABASE_*` em Environment Variables
-7. Conecte o domínio `gomove.fit` em Project Settings → Domains
+6. Adicione as variáveis `VITE_*` (ou use a integração Supabase → Vercel com prefixo `VITE_`)
+7. Conecte o domínio `gomove.fit` à branch `main` em Project Settings → Domains
 
 ## Supabase
 
-As migrations ficam em `supabase/migrations/`. Para aplicar no seu projeto:
+As migrations ficam em `supabase/migrations/`. Com a integração GitHub do Supabase ativa, migrations são aplicadas automaticamente ao fazer merge/push na branch `main`.
+
+Para aplicar manualmente (CLI local):
 
 ```sh
 npx supabase link --project-ref YOUR_PROJECT_ID
