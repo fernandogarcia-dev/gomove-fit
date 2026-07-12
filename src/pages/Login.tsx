@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoMoveLogo from "@/components/GoMoveLogo";
@@ -15,6 +15,8 @@ const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,22 +25,31 @@ const Login = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
         trackEvent("sign_up", { method: "email" });
+
+        if (data.session) {
+          toast({ title: "Account created!", description: "You are now signed in." });
+          navigate(redirectTo);
+          return;
+        }
+
         toast({
           title: "Account created!",
-          description: "Check your email to confirm your account.",
+          description:
+            "Check your email to confirm your account. You can still build plans without signing in.",
         });
+        setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         trackEvent("login", { method: "email" });
-        navigate("/");
+        navigate(redirectTo);
       }
     } catch (error: unknown) {
       toast({
@@ -52,7 +63,7 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 pb-8">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
@@ -66,7 +77,12 @@ const Login = () => {
             {isSignUp ? "Create account" : "Sign in"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isSignUp ? "Create an account to save your plans" : "Access your saved plans"}
+            {isSignUp
+              ? "Save plans and track your weekly progress"
+              : "Sign in to save plans and track progress"}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            You can build exercise plans without an account.
           </p>
         </div>
 
@@ -80,6 +96,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -92,6 +109,7 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
@@ -102,6 +120,7 @@ const Login = () => {
         <p className="text-center text-sm text-muted-foreground">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
+            type="button"
             onClick={() => setIsSignUp(!isSignUp)}
             className="font-medium text-primary hover:underline"
           >

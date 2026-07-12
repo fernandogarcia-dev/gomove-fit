@@ -3,11 +3,17 @@ import type { Database } from './types';
 
 const env = import.meta.env;
 
-// Accept multiple env var names so it works both with a manual .env and with
-// the Supabase -> Vercel integration (which syncs VITE_SUPABASE_ANON_KEY).
-const SUPABASE_URL = env.VITE_SUPABASE_URL;
+// Accept Vite and Next-style env var names (Supabase → Vercel integration may sync either).
+const SUPABASE_URL =
+  env.VITE_SUPABASE_URL ??
+  (env as Record<string, string | undefined>).NEXT_PUBLIC_SUPABASE_URL;
+
 const SUPABASE_PUBLISHABLE_KEY =
-  env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_ANON_KEY;
+  env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  env.VITE_SUPABASE_ANON_KEY ??
+  (env as Record<string, string | undefined>).NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  (env as Record<string, string | undefined>).NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  (env as Record<string, string | undefined>).SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
