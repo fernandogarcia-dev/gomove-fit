@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { Dumbbell, Loader2, Lock, PlayCircle, Sparkles } from "lucide-react";
+import { Dumbbell, Loader2, PlayCircle } from "lucide-react";
+import ProComingSoon from "@/components/ProComingSoon";
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useExerciseDetail } from "@/hooks/use-exercise-detail";
 import { useSubscription } from "@/hooks/use-subscription";
 import { BODY_REGIONS, DIFFICULTIES, EXERCISE_TYPES } from "@/lib/constants";
-import { trackEvent } from "@/lib/analytics/events";
 
 type ExerciseDetailDialogProps = {
   exerciseId: string | null;
@@ -107,18 +105,7 @@ const ExerciseDetailDialog = ({ exerciseId, onOpenChange }: ExerciseDetailDialog
                   </div>
                 )
               ) : (
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-5 text-center">
-                  <Lock className="h-6 w-6 text-primary" />
-                  <p className="text-sm font-medium text-foreground">
-                    Watch the full demonstration video with GoMove PRO
-                  </p>
-                  <Link to="/pro" onClick={() => trackEvent("pro_upsell_click", { source: "exercise_video" })}>
-                    <Button size="sm" className="gap-1.5">
-                      <Sparkles className="h-4 w-4" />
-                      Unlock PRO
-                    </Button>
-                  </Link>
-                </div>
+                <ProComingSoon variant="inline" />
               )}
             </div>
           </>
