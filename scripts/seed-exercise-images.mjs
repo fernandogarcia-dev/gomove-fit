@@ -42,8 +42,8 @@ loadEnv();
 const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
-const adminEmail = process.env.ADMIN_EMAIL ?? "fernando.garcia@backlinetalent.com";
-const adminPassword = process.env.ADMIN_PASSWORD ?? "GoMove@Admin2026!";
+const adminEmail = process.env.ADMIN_EMAIL ?? "admin@gomove.fit";
+const adminPassword = process.env.ADMIN_PASSWORD;
 const appUrl = (process.env.APP_URL ?? "https://gomove.fit").replace(/\/$/, "");
 
 if (!url || (!serviceRoleKey && !anonKey)) {

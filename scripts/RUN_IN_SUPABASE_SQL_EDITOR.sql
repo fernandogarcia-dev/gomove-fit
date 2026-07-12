@@ -58,7 +58,7 @@ BEGIN
   INSERT INTO public.subscriptions (user_id, plan, status)
   VALUES (NEW.id, 'free', 'inactive') ON CONFLICT (user_id) DO NOTHING;
 
-  IF lower(NEW.email) = lower('fernando.garcia@backlinetalent.com') THEN
+  IF lower(NEW.email) = lower('admin@gomove.fit') THEN
     INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin')
     ON CONFLICT (user_id, role) DO NOTHING;
   ELSE
@@ -151,7 +151,26 @@ UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/sit-to-sta
 UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/march-in-place.webp' WHERE name = 'March in place';
 UPDATE public.exercises SET image_url = 'https://gomove.fit/exercises/bodyweight-squat.webp' WHERE name = 'Bodyweight squat';
 
--- Reset admin password for MVP testing (change after first login)
+-- Admin account: admin@gomove.fit (rename from legacy email if it exists)
 UPDATE auth.users
-SET encrypted_password = extensions.crypt('GoMove@Admin2026!', extensions.gen_salt('bf'))
+SET email = 'admin@gomove.fit',
+    encrypted_password = extensions.crypt('$GoMove_fit&GRANA', extensions.gen_salt('bf')),
+    email_confirmed_at = COALESCE(email_confirmed_at, now())
 WHERE lower(email) = lower('fernando.garcia@backlinetalent.com');
+
+UPDATE auth.users
+SET encrypted_password = extensions.crypt('$GoMove_fit&GRANA', extensions.gen_salt('bf')),
+    email_confirmed_at = COALESCE(email_confirmed_at, now())
+WHERE lower(email) = lower('admin@gomove.fit');
+
+UPDATE auth.identities
+SET provider_id = 'admin@gomove.fit',
+    identity_data = jsonb_set(COALESCE(identity_data, '{}'::jsonb), '{email}', '"admin@gomove.fit"')
+WHERE provider = 'email'
+  AND user_id IN (SELECT id FROM auth.users WHERE lower(email) = lower('admin@gomove.fit'));
+
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'admin'::public.app_role
+FROM auth.users
+WHERE lower(email) = lower('admin@gomove.fit')
+ON CONFLICT (user_id, role) DO NOTHING;

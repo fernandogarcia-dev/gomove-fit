@@ -68,13 +68,13 @@ npx supabase db push
 
 ```sh
 export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-export ADMIN_EMAIL=fernando.garcia@backlinetalent.com
+export ADMIN_EMAIL=admin@gomove.fit
 export ADMIN_PASSWORD=your_secure_password
 npm run setup:admin
 npm run setup:seed
 ```
 
-O email `fernando.garcia@backlinetalent.com` também recebe role `admin` automaticamente ao se cadastrar via `/login`.
+O email `admin@gomove.fit` também recebe role `admin` automaticamente ao se cadastrar via `/login`.
 
 ## Build
 

@@ -6,7 +6,7 @@
  * Required env vars (add to .env locally, never commit):
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY  — from Supabase Dashboard → Settings → API
- *   ADMIN_EMAIL                — defaults to fernando.garcia@backlinetalent.com
+ *   ADMIN_EMAIL                — defaults to admin@gomove.fit
  *   ADMIN_PASSWORD             — min 6 characters
  *
  * Usage:
@@ -17,7 +17,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const adminEmail = process.env.ADMIN_EMAIL ?? "fernando.garcia@backlinetalent.com";
+const adminEmail = process.env.ADMIN_EMAIL ?? "admin@gomove.fit";
 const adminPassword = process.env.ADMIN_PASSWORD;
 
 if (!url || !serviceRoleKey) {
