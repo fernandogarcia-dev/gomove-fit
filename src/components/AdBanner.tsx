@@ -47,7 +47,7 @@ const CustomAdBanner = ({ ad, className }: { ad: CustomAd; className?: string })
   >
     <img
       src={ad.imageUrl}
-      alt={ad.alt ?? "Anuncio"}
+      alt={ad.alt ?? "Advertisement"}
       className="h-auto w-full object-cover"
       loading="lazy"
     />
@@ -99,7 +99,7 @@ const AdSenseBanner = ({
 const AdBanner = ({
   slot = "hero",
   className = "",
-  label = "Espaco para anuncio",
+  label = "Ad space",
   customAd,
 }: AdBannerProps) => {
   const resolvedCustomAd = customAd ?? customAdSlots[slot];

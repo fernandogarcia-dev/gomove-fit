@@ -31,8 +31,8 @@ const Login = () => {
         if (error) throw error;
         trackEvent("sign_up", { method: "email" });
         toast({
-          title: "Cadastro realizado!",
-          description: "Verifique seu e-mail para confirmar o cadastro.",
+          title: "Account created!",
+          description: "Check your email to confirm your account.",
         });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -43,8 +43,8 @@ const Login = () => {
     } catch (error: unknown) {
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
     } finally {
       setLoading(false);
@@ -57,33 +57,33 @@ const Login = () => {
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Voltar</span>
+            <span className="text-sm text-muted-foreground">Back</span>
           </Link>
           <div className="flex justify-center mb-4">
             <GoMoveLogo variant="icon" to={undefined} className="h-12 w-12" />
           </div>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            {isSignUp ? "Criar conta" : "Entrar"}
+            {isSignUp ? "Create account" : "Sign in"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isSignUp ? "Crie sua conta para salvar seus planos" : "Acesse seus planos salvos"}
+            {isSignUp ? "Create an account to save your plans" : "Access your saved plans"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
@@ -95,17 +95,17 @@ const Login = () => {
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Carregando..." : isSignUp ? "Criar conta" : "Entrar"}
+            {loading ? "Loading..." : isSignUp ? "Create account" : "Sign in"}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          {isSignUp ? "Já tem conta?" : "Não tem conta?"}{" "}
+          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
             className="font-medium text-primary hover:underline"
           >
-            {isSignUp ? "Entrar" : "Criar conta"}
+            {isSignUp ? "Sign in" : "Create account"}
           </button>
         </p>
       </div>
