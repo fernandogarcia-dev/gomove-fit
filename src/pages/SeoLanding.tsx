@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import SeoHead from "@/components/SeoHead";
@@ -20,13 +21,22 @@ import {
   getBlogCoverUrl,
   getPublishedDate,
 } from "@/lib/seo/blog-meta";
-import { getLandingPage, LANDING_PAGE_MAP } from "@/lib/seo/landing-pages";
+import { getLandingPage } from "@/lib/seo/landing-pages";
+import { fetchGuideBySlug, getStaticLandingPage } from "@/lib/guides";
 import { articleJsonLd, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import NotFound from "@/pages/NotFound";
 
 const SeoLanding = () => {
   const { slug = "" } = useParams<{ slug: string }>();
-  const page = getLandingPage(slug);
+  const staticPage = getStaticLandingPage(slug) ?? getLandingPage(slug);
+
+  const { data: page } = useQuery({
+    queryKey: ["guide", slug],
+    queryFn: () => fetchGuideBySlug(slug),
+    enabled: Boolean(slug),
+    initialData: staticPage,
+    staleTime: 5 * 60 * 1000,
+  });
 
   if (!page) {
     return <NotFound />;
@@ -38,7 +48,7 @@ const SeoLanding = () => {
   const readTime = estimateReadTimeMinutes(page);
   const category = getBlogCategoryForSlug(page.slug);
   const relatedPages = page.relatedSlugs
-    .map((relatedSlug) => LANDING_PAGE_MAP.get(relatedSlug))
+    .map((relatedSlug) => getStaticLandingPage(relatedSlug) ?? getLandingPage(relatedSlug))
     .filter((related): related is NonNullable<typeof related> => Boolean(related));
 
   const midSectionIndex = Math.max(0, Math.floor(page.sections.length / 2) - 1);

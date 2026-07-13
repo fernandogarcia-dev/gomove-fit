@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminGuides from "@/components/admin/AdminGuides";
 import ExerciseImageField from "@/components/admin/ExerciseImageField";
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -342,8 +344,18 @@ const AdminContent = () => {
   }, [isLoading, exercises.length]);
 
   return (
-    <AppShell title="Exercise admin" showBack backTo="/">
-      <div className="space-y-4">
+    <AppShell title="Admin" showBack backTo="/">
+      <Tabs defaultValue="exercises" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="guides">Guides</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="guides">
+          <AdminGuides />
+        </TabsContent>
+
+        <TabsContent value="exercises" className="space-y-4">
         <div className="grid grid-cols-3 gap-2 text-center text-sm">
           <div className="rounded-lg border bg-card p-2">
             <p className="text-lg font-semibold">{stats.total}</p>
@@ -514,7 +526,6 @@ const AdminContent = () => {
             ))}
           </div>
         )}
-      </div>
 
       <Sheet open={sheetOpen} onOpenChange={(open) => !open && closeSheet()}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
@@ -697,6 +708,8 @@ const AdminContent = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </TabsContent>
+      </Tabs>
     </AppShell>
   );
 };

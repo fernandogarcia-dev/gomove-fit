@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_guides: {
+        Row: {
+          created_at: string
+          faqs: Json
+          h1: string
+          hero_subtitle: string
+          keywords: string[]
+          meta_description: string
+          published: boolean
+          related_slugs: string[]
+          sections: Json
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          faqs?: Json
+          h1: string
+          hero_subtitle: string
+          keywords?: string[]
+          meta_description: string
+          published?: boolean
+          related_slugs?: string[]
+          sections?: Json
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          faqs?: Json
+          h1?: string
+          hero_subtitle?: string
+          keywords?: string[]
+          meta_description?: string
+          published?: boolean
+          related_slugs?: string[]
+          sections?: Json
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exercise_tracking: {
         Row: {
           completed_at: string | null

@@ -93,7 +93,7 @@ export const estimateReadTimeMinutes = (page: SeoLandingPage): number => {
   ].join(" ");
 
   const words = text.split(/\s+/).filter(Boolean).length;
-  return Math.max(3, Math.min(12, Math.round(words / 220)));
+  return Math.max(5, Math.round(words / 220));
 };
 
 /** Stable publish dates for SEO — spread across 2025–2026 by catalog order */

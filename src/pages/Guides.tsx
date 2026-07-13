@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import SeoHead from "@/components/SeoHead";
@@ -9,11 +10,23 @@ import {
   FEATURED_BLOG_SLUGS,
   getBlogCoverUrl,
 } from "@/lib/seo/blog-meta";
-import { GUIDE_CATEGORIES, LANDING_PAGE_MAP } from "@/lib/seo/landing-pages";
+import { GUIDE_CATEGORIES } from "@/lib/seo/landing-pages";
+import { fetchPublishedGuides, getAllStaticLandingPages } from "@/lib/guides";
 import { blogListingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
 
 const Guides = () => {
-  const featuredPages = FEATURED_BLOG_SLUGS.map((slug) => LANDING_PAGE_MAP.get(slug)).filter(
+  const staticGuides = getAllStaticLandingPages();
+
+  const { data: guides = staticGuides } = useQuery({
+    queryKey: ["published-guides"],
+    queryFn: fetchPublishedGuides,
+    initialData: staticGuides,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const guideMap = new Map(guides.map((page) => [page.slug, page]));
+
+  const featuredPages = FEATURED_BLOG_SLUGS.map((slug) => guideMap.get(slug)).filter(
     (page): page is NonNullable<typeof page> => Boolean(page),
   );
 
@@ -91,7 +104,7 @@ const Guides = () => {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {category.slugs.map((slug) => {
-                const page = LANDING_PAGE_MAP.get(slug);
+                const page = guideMap.get(slug);
                 if (!page) return null;
                 return <BlogPostCard key={slug} page={page} />;
               })}
@@ -111,7 +124,7 @@ const Guides = () => {
             .
           </p>
           <p className="mt-2 text-xs">
-            Updated regularly · {LANDING_PAGE_MAP.size} articles · Nationwide USA
+            Updated regularly · {guides.length} articles · Nationwide USA
           </p>
         </footer>
       </div>
