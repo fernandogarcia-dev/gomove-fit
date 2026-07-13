@@ -5,68 +5,59 @@ import { writeFileSync } from "node:fs";
 import { getAllLandingSlugs } from "./src/lib/seo/landing-pages";
 import { PUBLIC_ROUTES, SITE_URL } from "./src/lib/seo/site";
 
+const PRERENDER_ROUTES = [
+  ...PUBLIC_ROUTES,
+  ...getAllLandingSlugs().map((slug) => `/guides/${slug}`),
+];
+
 function sitemapPlugin() {
   return {
     name: "gomove-sitemap",
     closeBundle() {
       const today = new Date().toISOString().slice(0, 10);
-      const staticPaths = [...PUBLIC_ROUTES];
-      const guidePaths = getAllLandingSlugs().map((slug) => `/guides/${slug}`);
-      const allPaths = [...new Set([...staticPaths, ...guidePaths])];
 
-      const urls = allPaths
-        .map((route) => {
-          const priority =
-            route === "/"
-              ? "1.0"
-              : route === "/guides"
-                ? "0.9"
-                : route.startsWith("/guides/")
-                  ? "0.8"
-                  : "0.7";
-          const changefreq =
-            route === "/" || route === "/guides" ? "weekly" : route.startsWith("/guides/") ? "monthly" : "weekly";
+      const urls = PRERENDER_ROUTES.map((route) => {
+        const priority =
+          route === "/"
+            ? "1.0"
+            : route === "/guides"
+              ? "0.9"
+              : route.startsWith("/guides/")
+                ? "0.8"
+                : "0.7";
+        const changefreq =
+          route === "/" || route === "/guides"
+            ? "weekly"
+            : route.startsWith("/guides/")
+              ? "monthly"
+              : "weekly";
 
-          return `  <url>
+        const imageBlock =
+          route === "/"
+            ? `
+    <image:image>
+      <image:loc>${SITE_URL}/og-image.png</image:loc>
+      <image:title>GoMove — Home Workouts Without a Gym</image:title>
+      <image:caption>Personalized home workout plans for Americans</image:caption>
+    </image:image>`
+            : "";
+
+        return `  <url>
     <loc>${SITE_URL}${route}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
+    <priority>${priority}</priority>${imageBlock}
   </url>`;
-        })
-        .join("\n");
+      }).join("\n");
 
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls}
 </urlset>
 `;
 
       writeFileSync(path.resolve(__dirname, "dist/sitemap.xml"), sitemap);
-
-      const crawlLinks = allPaths
-        .map((route) => `        <li><a href="${route}">${route}</a></li>`)
-        .join("\n");
-
-      const seoIndex = `<!DOCTYPE html>
-<html lang="en-US">
-  <head>
-    <meta charset="UTF-8" />
-    <title>GoMove Site Index — Home Workout Guides</title>
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="${SITE_URL}/guides" />
-  </head>
-  <body>
-    <h1>GoMove — Home workout guides and exercise plans</h1>
-    <p>Free home workouts for Americans. Exercise without a gym.</p>
-    <ul>
-${crawlLinks}
-    </ul>
-  </body>
-</html>
-`;
-
-      writeFileSync(path.resolve(__dirname, "dist/seo-index.html"), seoIndex);
     },
   };
 }
@@ -84,6 +75,16 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  ssr: {
+    noExternal: ["react-helmet-async"],
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+      },
     },
   },
 });

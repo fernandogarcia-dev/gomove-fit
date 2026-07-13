@@ -128,7 +128,7 @@ const Index = () => {
       <section className="py-8 md:py-12">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
@@ -197,7 +197,7 @@ const Index = () => {
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 * i }}
               className="rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
