@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, ClipboardList, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ClipboardList, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoMoveLogo from "@/components/GoMoveLogo";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics/events";
 import { clearStoredReferralCode, getStoredReferralCode } from "@/lib/referral";
-import { BODY_REGIONS, DAYS_OF_WEEK, DIFFICULTIES, type BodyRegion, type Difficulty } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { loadPendingPlan, savePendingPlan, type PendingPlan } from "@/lib/pending-plan";
 import { PendingPlanCard, PlanWizardDialog } from "@/components/plan/PendingPlanCard";
@@ -43,9 +42,6 @@ const Login = () => {
   const [phone, setPhone] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
-  const [discomfortAreas, setDiscomfortAreas] = useState<BodyRegion[]>([]);
-  const [fitnessLevel, setFitnessLevel] = useState<Difficulty | "">("");
-  const [workoutDays, setWorkoutDays] = useState<number[]>([1, 3, 5]);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -59,38 +55,10 @@ const Login = () => {
 
   const refreshPendingPlan = () => setPendingPlan(loadPendingPlan());
 
-  useEffect(() => {
-    const prefs = pendingPlan?.plan.preferences;
-    if (!prefs) return;
-    if (prefs.bodyRegions?.length) {
-      setDiscomfortAreas(prefs.bodyRegions);
-    }
-    if (prefs.difficulty) {
-      setFitnessLevel(prefs.difficulty);
-    }
-    if (prefs.daysPerWeek?.length) {
-      setWorkoutDays(prefs.daysPerWeek);
-    }
-  }, [pendingPlan]);
-
   const canCreateAccount = useMemo(
-    () => acceptTerms && acceptDisclaimer,
-    [acceptTerms, acceptDisclaimer],
+    () => acceptTerms && acceptDisclaimer && Boolean(pendingPlan?.plan.preferences),
+    [acceptTerms, acceptDisclaimer, pendingPlan],
   );
-
-  const toggleDiscomfort = (value: BodyRegion) => {
-    setDiscomfortAreas((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    );
-  };
-
-  const toggleWorkoutDay = (value: number) => {
-    setWorkoutDays((current) =>
-      current.includes(value)
-        ? current.filter((day) => day !== value)
-        : [...current, value].sort((a, b) => a - b),
-    );
-  };
 
   const resetSignUpForm = () => {
     setFirstName("");
@@ -99,9 +67,6 @@ const Login = () => {
     setPhone("");
     setDateOfBirth("");
     setGender("");
-    setDiscomfortAreas([]);
-    setFitnessLevel("");
-    setWorkoutDays([1, 3, 5]);
     setAcceptTerms(false);
     setAcceptDisclaimer(false);
     setMarketingOptIn(false);
@@ -119,15 +84,13 @@ const Login = () => {
         if (!acceptTerms || !acceptDisclaimer) {
           throw new Error("Please accept the terms and medical disclaimer to continue.");
         }
-        if (discomfortAreas.length === 0) {
-          throw new Error("Select at least one area where you feel discomfort.");
+        if (!pendingPlan?.plan.preferences) {
+          throw new Error("Build your personalized plan before creating your account.");
         }
-        if (!fitnessLevel) {
-          throw new Error("Select your current fitness level.");
-        }
-        if (workoutDays.length === 0) {
-          throw new Error("Select at least one day you can exercise.");
-        }
+
+        const prefs = pendingPlan.plan.preferences;
+        const discomfortAreas =
+          pendingPlan.bodyRegions.length > 0 ? pendingPlan.bodyRegions : prefs.bodyRegions;
 
         const referralCode = getStoredReferralCode();
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
@@ -145,8 +108,8 @@ const Login = () => {
               date_of_birth: dateOfBirth || null,
               gender: gender || null,
               discomfort_areas: discomfortAreas,
-              fitness_level: fitnessLevel,
-              workout_days: workoutDays,
+              fitness_level: prefs.difficulty,
+              workout_days: prefs.daysPerWeek,
               marketing_opt_in: marketingOptIn,
               referral_code: referralCode ?? undefined,
             },
@@ -230,9 +193,10 @@ const Login = () => {
                     </div>
                     <div className="flex-1 space-y-3">
                       <div>
-                        <p className="font-medium text-foreground">Want a personalized plan first?</p>
+                        <p className="font-medium text-foreground">Build your personalized plan</p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Build your weekly exercise plan here without leaving signup.
+                          Answer a few quick questions to create your weekly exercise plan before
+                          you finish signup.
                         </p>
                       </div>
                       <PlanWizardDialog
@@ -333,78 +297,6 @@ const Login = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
-                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Your body & goals
-                </h2>
-                  <div className="space-y-2">
-                  <Label>Where do you feel discomfort? (select all that apply)</Label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {BODY_REGIONS.map((item) => {
-                      const selected = discomfortAreas.includes(item.value);
-                      return (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => toggleDiscomfort(item.value)}
-                          className={cn(
-                            "rounded-xl border-2 px-3 py-2 text-left text-sm font-medium transition-colors",
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          {selected ? <Check className="mr-1 inline h-3.5 w-3.5" /> : null}
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fitness level</Label>
-                  <Select
-                    value={fitnessLevel}
-                    onValueChange={(value) => setFitnessLevel(value as Difficulty)}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="How active are you today?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIFFICULTIES.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Which days can you usually exercise?</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {DAYS_OF_WEEK.map((item) => {
-                      const selected = workoutDays.includes(item.value);
-                      return (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => toggleWorkoutDay(item.value)}
-                          className={cn(
-                            "min-w-[3.5rem] rounded-lg border-2 px-3 py-2 text-sm font-medium",
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
               </section>
