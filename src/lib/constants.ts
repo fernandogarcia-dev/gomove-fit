@@ -1,11 +1,31 @@
 export const BODY_REGIONS = [
   { value: "neck", label: "Neck" },
   { value: "shoulders", label: "Shoulders" },
-  { value: "back", label: "Back" },
+  { value: "upper_back", label: "Upper back" },
+  { value: "lower_back", label: "Lower back" },
+  { value: "chest", label: "Chest" },
+  { value: "elbows", label: "Elbows" },
+  { value: "wrists_hands", label: "Wrists & hands" },
+  { value: "core", label: "Core / abs" },
   { value: "hips", label: "Hips" },
+  { value: "glutes", label: "Glutes" },
+  { value: "thighs", label: "Thighs" },
   { value: "knees", label: "Knees" },
+  { value: "calves", label: "Calves" },
+  { value: "ankles_feet", label: "Ankles & feet" },
   { value: "full_body", label: "Full body" },
 ] as const;
+
+/** Maps legacy saved-plan values to the expanded region list used for matching. */
+export const expandBodyRegionsForMatch = (regions: readonly string[]): string[] => [
+  ...new Set(
+    regions.flatMap((region) => (region === "back" ? ["upper_back", "lower_back"] : [region])),
+  ),
+];
+
+export const bodyRegionLabel = (value: string): string =>
+  BODY_REGIONS.find((item) => item.value === value)?.label ??
+  value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 export const DIFFICULTIES = [
   { value: "iniciante", label: "Beginner" },

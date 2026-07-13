@@ -268,7 +268,10 @@ export const PlanWizard = ({
       {step === 1 ? (
         <>
           <h3 className="font-display text-lg font-semibold">Where do you feel discomfort?</h3>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-sm text-muted-foreground">
+            Select every area you want to work on. You can pick more than one.
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {BODY_REGIONS.map((item) => {
               const selected = bodyRegions.includes(item.value);
               return (
@@ -277,7 +280,7 @@ export const PlanWizard = ({
                   type="button"
                   onClick={() => toggleBodyRegion(item.value)}
                   className={cn(
-                    "rounded-full border-2 px-3 py-2 text-sm font-medium",
+                    "rounded-xl border-2 px-3 py-2.5 text-sm font-medium",
                     selected
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card",

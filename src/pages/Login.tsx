@@ -341,9 +341,9 @@ const Login = () => {
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   Your body & goals
                 </h2>
-                <div className="space-y-2">
+                  <div className="space-y-2">
                   <Label>Where do you feel discomfort? (select all that apply)</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {BODY_REGIONS.map((item) => {
                       const selected = discomfortAreas.includes(item.value);
                       return (
@@ -352,7 +352,7 @@ const Login = () => {
                           type="button"
                           onClick={() => toggleDiscomfort(item.value)}
                           className={cn(
-                            "rounded-full border-2 px-3 py-1.5 text-sm font-medium transition-colors",
+                            "rounded-xl border-2 px-3 py-2 text-left text-sm font-medium transition-colors",
                             selected
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border bg-background",

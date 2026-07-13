@@ -335,7 +335,7 @@ const PlanBuilder = () => {
                 <p className="text-sm text-muted-foreground">
                   Select every area you want to work on. You can pick more than one.
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {BODY_REGIONS.map((item) => {
                     const selected = bodyRegions.includes(item.value);
                     return (
@@ -344,7 +344,7 @@ const PlanBuilder = () => {
                         type="button"
                         onClick={() => toggleBodyRegion(item.value)}
                         className={cn(
-                          "rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                          "rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-colors",
                           selected
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-border bg-card text-foreground",

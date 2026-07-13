@@ -1,5 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import type { BodyRegion, Difficulty, Equipment } from "@/lib/constants";
+import { bodyRegionLabel, expandBodyRegionsForMatch } from "@/lib/constants";
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
 
@@ -39,8 +40,10 @@ const DIFFICULTY_RANK: Record<Difficulty, number> = {
   avancado: 3,
 };
 
-const matchesBodyRegions = (exercise: Exercise, regions: BodyRegion[]): boolean =>
-  regions.includes(exercise.body_region as BodyRegion);
+const matchesBodyRegions = (exercise: Exercise, regions: BodyRegion[]): boolean => {
+  const normalized = expandBodyRegionsForMatch(regions);
+  return normalized.includes(exercise.body_region);
+};
 
 const matchesDifficulty = (exercise: Exercise, difficulty: Difficulty): boolean =>
   DIFFICULTY_RANK[exercise.difficulty as Difficulty] <= DIFFICULTY_RANK[difficulty];
@@ -151,7 +154,7 @@ export const getWeekStart = (date = new Date()): string => {
 };
 
 export const formatBodyRegions = (regions: BodyRegion[]): string =>
-  regions.length === 0 ? "Custom" : regions.join(", ");
+  regions.length === 0 ? "Custom" : regions.map((region) => bodyRegionLabel(region)).join(", ");
 
 export const formatTimeRange = (min: number, max: number): string =>
   min === max ? `${min} min` : `${min}–${max} min`;
