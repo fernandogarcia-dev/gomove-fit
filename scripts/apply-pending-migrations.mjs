@@ -45,6 +45,12 @@ if (!projectRef || !password) {
 const pending = [
   "20260712210000_add_pro_subscriptions.sql",
   "20260712211000_add_referrals.sql",
+  "20260712213000_seed_exercise_images.sql",
+  "20260712223000_update_admin_account.sql",
+  "20260712224000_fix_exercise_image_urls.sql",
+  "20260712225000_fix_signup_triggers.sql",
+  "20260712230000_expand_exercise_catalog.sql",
+  "20260712231000_expand_body_regions.sql",
 ];
 
 const regionsToTry = [
