@@ -6,13 +6,14 @@
  *
  * Required:
  *   VITE_SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_SERVICE_ROLE_KEY (or vercel env pull .env.vercel.production)
  *
  * Usage:
  *   node scripts/seed-blog-guides.mjs
- *   node scripts/seed-blog-guides.mjs --force   # re-upsert even when table has rows
+ *   node scripts/seed-blog-guides.mjs --force
  */
 
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
@@ -21,12 +22,40 @@ import { createClient } from "@supabase/supabase-js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 
+const loadEnvFile = (filename) => {
+  try {
+    const raw = readFileSync(path.join(rootDir, filename), "utf8");
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = value;
+    }
+  } catch {
+    // optional
+  }
+};
+
+for (const file of [".env.vercel.production", ".env.vercel", ".env"]) {
+  loadEnvFile(file);
+}
+
 const force = process.argv.includes("--force");
-const url = process.env.VITE_SUPABASE_URL;
+const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !serviceRoleKey) {
-  console.error("Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+  console.error("Missing VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+  console.error("Run: vercel env pull .env.vercel.production --environment=production --yes");
   process.exit(1);
 }
 
