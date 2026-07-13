@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "setup:admin": "node scripts/setup-admin.mjs",
     "setup:seed": "node scripts/seed-exercises.mjs",
-    "setup:guides": "node scripts/seed-blog-guides.mjs",
+    "setup:guides": "node scripts/seed-blog-guides-pg.mjs",
     "setup:images": "node scripts/seed-exercise-images.mjs",
     "db:migrate": "node scripts/apply-pending-migrations.mjs"
   },
