@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Save } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import SeoHead from "@/components/SeoHead";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -316,6 +317,18 @@ const PlanBuilder = () => {
 
   return (
     <AppShell title={editPlanId ? "Edit your plan" : "Build your plan"} showBack backTo={editPlanId ? `/plans/${editPlanId}` : "/"}>
+      <SeoHead
+        title="Build Your Free Home Workout Plan"
+        description="Answer a few questions and get a personalized weekly home workout plan. No gym required. Works with apartment gyms, bands, dumbbells, or no equipment."
+        path="/plan"
+        keywords={[
+          "build home workout plan",
+          "personalized home workout",
+          "free workout plan generator",
+          "apartment gym plan",
+          "no gym workout plan",
+        ]}
+      />
       <MedicalDisclaimer compact />
 
       <div className="mt-4 space-y-5">

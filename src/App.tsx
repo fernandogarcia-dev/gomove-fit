@@ -20,6 +20,10 @@ import Pro from "./pages/Pro";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Guides from "./pages/Guides";
+import SeoLanding from "./pages/SeoLanding";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +55,10 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/plan" element={<PlanBuilder />} />
               <Route path="/exercises" element={<Exercises />} />
+              <Route path="/guides" element={<Guides />} />
+              <Route path="/guides/:slug" element={<SeoLanding />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/plans" element={<MyPlans />} />
               <Route path="/plans/:id" element={<PlanDetail />} />
               <Route path="/pro" element={<Pro />} />

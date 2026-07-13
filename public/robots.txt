@@ -1,14 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /guides/
+Allow: /plan
+Allow: /exercises
+Allow: /pro
+Allow: /privacy
+Allow: /terms
+
+Disallow: /admin
+Disallow: /plans/
+Disallow: /api/
+
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: *
-Allow: /
+Sitemap: https://gomove.fit/sitemap.xml

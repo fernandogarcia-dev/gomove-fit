@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import SeoHead from "@/components/SeoHead";
 import ExerciseDetailDialog from "@/components/ExerciseDetailDialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,19 @@ const Exercises = () => {
 
   return (
     <AppShell title="Exercise catalog">
+      <SeoHead
+        title="Home Exercise Catalog — Stretches, Mobility & Strength"
+        description="Browse free home exercises for every body region. Stretches, mobility drills, and strength moves for apartment gyms and no-equipment workouts across the USA."
+        path="/exercises"
+        keywords={[
+          "home exercises",
+          "exercise catalog",
+          "stretching exercises at home",
+          "mobility exercises",
+          "bodyweight exercises",
+          "apartment gym exercises",
+        ]}
+      />
       <div className="space-y-4">
         <Input
           placeholder="Search exercises..."
