@@ -11,6 +11,7 @@ import AnalyticsRouteTracker from "@/components/AnalyticsRouteTracker";
 import SiteVerification from "@/components/SiteVerification";
 import ClientOnly from "@/components/ClientOnly";
 import AdSenseScript from "@/components/ads/AdSenseScript";
+import ScrollToTop from "@/components/ScrollToTop";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { captureReferralFromUrl } from "@/lib/referral";
 import AppRoutes from "./AppRoutes";
@@ -37,6 +38,7 @@ const App = ({ url }: AppProps) => {
 
   const routes = (
     <>
+      <ScrollToTop />
       <AppRoutes />
       <ClientOnly>
         <AnalyticsRouteTracker />

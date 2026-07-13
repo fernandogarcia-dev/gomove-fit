@@ -32,9 +32,8 @@ const AppHeader = ({ showBack = false, backTo = "/", title }: AppHeaderProps) =>
                 <span className="sr-only">Back</span>
               </Button>
             </Link>
-          ) : !title ? (
-            <GoMoveLogo variant="full" className="h-7 shrink-0" />
           ) : null}
+          <GoMoveLogo variant="full" className="h-7 shrink-0" to="/" />
           {title ? (
             <h1 className="truncate font-display text-base font-semibold text-foreground">{title}</h1>
           ) : null}

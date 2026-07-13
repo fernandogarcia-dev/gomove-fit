@@ -21,31 +21,31 @@ export const BLOG_CATEGORIES: BlogCategory[] = [
     id: "home-apartment",
     title: "Home & apartment workouts",
     coverImage: "/blog/covers/home-apartment.webp",
-    coverAlt: "Home and apartment gym workout guides",
+    coverAlt: "Woman doing a home workout in a living room",
   },
   {
     id: "equipment",
     title: "Equipment-based home training",
     coverImage: "/blog/covers/equipment.webp",
-    coverAlt: "Resistance bands, dumbbells, and chair workout guides",
+    coverAlt: "Dumbbells and home gym equipment",
   },
   {
     id: "pain-relief",
     title: "Pain & body region guides",
     coverImage: "/blog/covers/pain-relief.webp",
-    coverAlt: "Gentle pain relief and mobility exercises at home",
+    coverAlt: "Stretching and mobility exercises at home",
   },
   {
     id: "lifestyle",
     title: "Lifestyle & beginner guides",
     coverImage: "/blog/covers/lifestyle.webp",
-    coverAlt: "Beginner, senior, and work-from-home exercise guides",
+    coverAlt: "Beginner-friendly home fitness routine",
   },
   {
     id: "states",
     title: "Home workouts by US state",
     coverImage: "/blog/covers/states.webp",
-    coverAlt: "State-by-state home workout guides across the USA",
+    coverAlt: "Fitness and active lifestyle across the United States",
   },
 ];
 
@@ -77,7 +77,7 @@ export const getBlogCategoryForSlug = (slug: string): BlogCategory => {
   return BLOG_CATEGORIES.find((cat) => cat.id === id) ?? BLOG_CATEGORIES[0];
 };
 
-export const getBlogCoverImage = (slug: string): string => getBlogCategoryForSlug(slug).coverImage;
+export const getBlogCoverImage = (slug: string): string => `/blog/posts/${slug}.webp`;
 
 export const getBlogCoverAlt = (slug: string, page?: SeoLandingPage): string =>
   page ? `${page.h1} — GoMove home workout guide` : getBlogCategoryForSlug(slug).coverAlt;

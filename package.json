@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/generate-brand-images.mjs",
+    "prebuild": "node scripts/generate-brand-images.mjs && node scripts/download-blog-images.mjs",
     "build": "npm run build:client && npm run build:server && npm run prerender",
     "build:client": "vite build",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",

@@ -8,7 +8,8 @@ export type AdPlacement =
 
 const env = import.meta.env;
 
-export const ADSENSE_CLIENT_ID = env.VITE_ADSENSE_CLIENT_ID as string | undefined;
+export const ADSENSE_CLIENT_ID =
+  (env.VITE_ADSENSE_CLIENT_ID as string | undefined) ?? "ca-pub-7220183715557987";
 
 const SLOT_ENV_MAP: Record<AdPlacement, string> = {
   "blog-hub-top": "VITE_ADSENSE_SLOT_BLOG_HUB_TOP",
