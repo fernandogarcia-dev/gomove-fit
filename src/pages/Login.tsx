@@ -360,7 +360,15 @@ const Login = () => {
                     onCheckedChange={(checked) => setAcceptTerms(checked === true)}
                   />
                   <Label htmlFor="terms" className="text-sm leading-relaxed">
-                    I agree to the Terms of Service and Privacy Policy.
+                    I agree to the{" "}
+                    <Link to="/terms" className="text-primary underline-offset-2 hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="text-primary underline-offset-2 hover:underline">
+                      Privacy Policy
+                    </Link>
+                    .
                   </Label>
                 </div>
                 <div className="flex items-start gap-2">
