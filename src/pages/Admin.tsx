@@ -84,7 +84,7 @@ type MediaFilter = "all" | "with_image" | "missing_image" | "with_video";
 
 const emptyForm = (): ExerciseForm => ({
   name: "",
-  body_region: "back",
+  body_region: "lower_back",
   exercise_type: "stretch",
   difficulty: "iniciante",
   equipment: ["none"],

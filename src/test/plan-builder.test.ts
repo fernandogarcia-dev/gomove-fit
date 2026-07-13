@@ -6,6 +6,7 @@ import {
   isPlanEmpty,
   pickDayMinutes,
 } from "@/lib/plan-builder";
+import type { BodyRegion } from "@/lib/constants";
 import type { Database } from "@/integrations/supabase/types";
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
@@ -13,7 +14,7 @@ type Exercise = Database["public"]["Tables"]["exercises"]["Row"];
 const mockExercise = (overrides: Partial<Exercise>): Exercise => ({
   id: overrides.id ?? crypto.randomUUID(),
   name: overrides.name ?? "Test exercise",
-  body_region: overrides.body_region ?? "back",
+  body_region: overrides.body_region ?? "lower_back",
   exercise_type: overrides.exercise_type ?? "stretch",
   difficulty: overrides.difficulty ?? "iniciante",
   equipment: overrides.equipment ?? ["none"],
@@ -30,8 +31,8 @@ const mockExercise = (overrides: Partial<Exercise>): Exercise => ({
 });
 
 const catalog: Exercise[] = [
-  mockExercise({ id: "1", name: "Cat-cow", body_region: "back", equipment: ["mat"], duration_minutes: 8 }),
-  mockExercise({ id: "2", name: "Child's pose", body_region: "back", equipment: ["mat"], duration_minutes: 5 }),
+  mockExercise({ id: "1", name: "Cat-cow", body_region: "lower_back", equipment: ["mat"], duration_minutes: 8 }),
+  mockExercise({ id: "2", name: "Child's pose", body_region: "lower_back", equipment: ["mat"], duration_minutes: 5 }),
   mockExercise({ id: "3", name: "Neck stretch", body_region: "neck", equipment: ["none"], duration_minutes: 5 }),
   mockExercise({
     id: "4",
@@ -46,7 +47,7 @@ const catalog: Exercise[] = [
 describe("plan-builder", () => {
   it("matches any selected body region", () => {
     const matched = filterExercises(catalog, {
-      bodyRegions: ["back", "neck"],
+      bodyRegions: ["lower_back", "neck"],
       difficulty: "iniciante",
       equipment: ["none", "mat"],
       minutesMin: 10,
@@ -80,7 +81,7 @@ describe("plan-builder", () => {
 
   it("builds a weekly schedule respecting max minutes per day", () => {
     const plan = buildWeeklyPlan(catalog, {
-      bodyRegions: ["back"],
+      bodyRegions: ["lower_back"],
       difficulty: "iniciante",
       equipment: ["mat"],
       minutesMin: 10,
@@ -118,5 +119,20 @@ describe("plan-builder", () => {
 
     const monday = new Date(2026, 6, 13, 8, 0, 0);
     expect(getWeekStart(monday)).toBe("2026-07-13");
+  });
+
+  it("expands legacy back region to upper and lower back", () => {
+    const upperBack = mockExercise({ id: "5", name: "Thread the needle", body_region: "upper_back" });
+    const matched = filterExercises([...catalog, upperBack], {
+      bodyRegions: ["back"] as unknown as BodyRegion[],
+      difficulty: "iniciante",
+      equipment: ["none", "mat"],
+      minutesMin: 10,
+      minutesMax: 20,
+      daysPerWeek: [1],
+    });
+
+    expect(matched.map((item) => item.name)).toContain("Cat-cow");
+    expect(matched.map((item) => item.name)).toContain("Thread the needle");
   });
 });
