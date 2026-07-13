@@ -32,16 +32,27 @@ function sitemapPlugin() {
               ? "monthly"
               : "weekly";
 
+        const imageBlock =
+          route === "/"
+            ? `
+    <image:image>
+      <image:loc>${SITE_URL}/og-image.png</image:loc>
+      <image:title>GoMove — Home Workouts Without a Gym</image:title>
+      <image:caption>Personalized home workout plans for Americans</image:caption>
+    </image:image>`
+            : "";
+
         return `  <url>
     <loc>${SITE_URL}${route}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
+    <priority>${priority}</priority>${imageBlock}
   </url>`;
       }).join("\n");
 
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls}
 </urlset>
 `;

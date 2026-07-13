@@ -1,4 +1,4 @@
-import { SITE_NAME, SITE_URL, SITE_TAGLINE } from "./site";
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_LOGO } from "./site";
 
 type FaqItem = { question: string; answer: string };
 
@@ -7,7 +7,7 @@ export const organizationJsonLd = () => ({
   "@type": "Organization",
   name: SITE_NAME,
   url: SITE_URL,
-  logo: `${SITE_URL}/logotipo.svg`,
+  logo: SITE_LOGO,
   description: SITE_TAGLINE,
   areaServed: {
     "@type": "Country",
@@ -79,7 +79,7 @@ export const articleJsonLd = (params: {
     name: SITE_NAME,
     logo: {
       "@type": "ImageObject",
-      url: `${SITE_URL}/logotipo.svg`,
+      url: SITE_LOGO,
     },
   },
   keywords: params.keywords?.join(", "),

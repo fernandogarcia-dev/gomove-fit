@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#071510"/>
+      <stop offset="55%" stop-color="#0b2218"/>
+      <stop offset="100%" stop-color="#123828"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="22%" cy="18%" r="55%">
+      <stop offset="0%" stop-color="#00d48d" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#00d48d" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <circle cx="1040" cy="120" r="180" fill="#00b87a" fill-opacity="0.08"/>
+  <circle cx="980" cy="520" r="240" fill="#009b59" fill-opacity="0.10"/>
+  <text x="96" y="250" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="800">Home workouts</text>
+  <text x="96" y="320" fill="#00d48d" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="800">without a gym</text>
+  <text x="96" y="390" fill="#d7f5e8" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="500">Personalized exercise plans for your home,</text>
+  <text x="96" y="430" fill="#d7f5e8" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="500">apartment gym, or zero equipment.</text>
+  <text x="96" y="540" fill="#9fd9bf" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600">gomove.fit</text>
+</svg>
