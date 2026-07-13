@@ -4,87 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GoMove — Home Workouts Without a Gym | Free Personalized Exercise Plans</title>
-    <meta
-      name="description"
-      content="Free home workout app for Americans. Exercise at home without a gym using bodyweight, household items, or your apartment building gym. Personalized plans in 2 minutes."
-    />
-    <meta name="author" content="GoMove" />
-    <meta
-      name="keywords"
-      content="home workout, workout at home, exercises at home, no gym workout, apartment gym workout, condo gym exercises, no equipment workout, home fitness app, USA home workout, bodyweight exercises, resistance band workout, dumbbell workout at home, work from home exercises, senior exercises at home, personalized workout plan"
-    />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
-    <meta name="geo.region" content="US" />
-    <meta name="geo.placename" content="United States" />
-    <meta name="language" content="en-US" />
-    <meta name="content-language" content="en-US" />
-    <meta name="target" content="home fitness, apartment gym, no gym workout, United States" />
-    <link rel="canonical" href="https://gomove.fit/" />
-
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://gomove.fit/" />
-    <meta property="og:site_name" content="GoMove" />
-    <meta property="og:locale" content="en_US" />
-    <meta
-      property="og:title"
-      content="GoMove — Home Workouts Without a Gym | Free Personalized Exercise Plans"
-    />
-    <meta
-      property="og:description"
-      content="Exercise at home without a commercial gym. Personalized workouts for your apartment, condo gym, or zero equipment. Free for Americans nationwide."
-    />
-    <meta property="og:image" content="https://gomove.fit/logotipo.svg" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="GoMove — Home Workouts Without a Gym | Free Personalized Exercise Plans"
-    />
-    <meta
-      name="twitter:description"
-      content="Free personalized home workout plans. No gym membership. Apartment gym, bodyweight, bands, dumbbells, or nothing at all."
-    />
-    <meta name="twitter:image" content="https://gomove.fit/logotipo.svg" />
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "GoMove",
-        "url": "https://gomove.fit",
-        "applicationCategory": "HealthApplication",
-        "operatingSystem": "Web",
-        "description": "Free personalized home workout plans for Americans. Exercise without a gym using bodyweight, home equipment, or apartment building gyms.",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "audience": { "@type": "Audience", "audienceType": "Americans exercising at home" }
-      }
-    </script>
+    <!--ssr-head-->
   </head>
 
   <body>
-    <div id="seo-crawl-links" hidden aria-hidden="true">
-      <h1>GoMove — Home Workouts Without a Gym</h1>
-      <p>
-        Free personalized exercise plans for Americans. Work out at home, in your apartment gym, or with
-        no equipment. No commercial gym membership required.
-      </p>
-      <nav aria-label="SEO navigation">
-        <a href="/">Home</a>
-        <a href="/plan">Build workout plan</a>
-        <a href="/exercises">Exercise catalog</a>
-        <a href="/guides">Home workout guides</a>
-        <a href="/guides/home-workouts">Home workouts</a>
-        <a href="/guides/workout-at-home-no-gym">Workout at home no gym</a>
-        <a href="/guides/apartment-gym-workout">Apartment gym workout</a>
-        <a href="/guides/no-equipment-workout">No equipment workout</a>
-        <a href="/guides/beginner-home-workout">Beginner home workout</a>
-        <a href="/guides/work-from-home-exercises">Work from home exercises</a>
-        <a href="/privacy">Privacy policy</a>
-        <a href="/terms">Terms of service</a>
-      </nav>
-    </div>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"><!--ssr-outlet--></div>
+    <script type="module" src="/src/entry-client.tsx"></script>
   </body>
 </html>
