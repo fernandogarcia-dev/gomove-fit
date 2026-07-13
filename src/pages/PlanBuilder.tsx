@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Save } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import MedicalDisclaimer from "@/components/MedicalDisclaimer";
@@ -61,23 +61,68 @@ const OptionButton = ({ label, description, selected, onClick }: OptionProps) =>
 const PlanBuilder = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editPlanId = searchParams.get("edit");
   const { toast } = useToast();
   const { data: exercises = [], isLoading: exercisesLoading, isError: exercisesError } = useExercises();
 
   const pendingPlan = useMemo(() => loadPendingPlan(), []);
+  const pendingPrefs = pendingPlan?.plan.preferences;
 
   const [step, setStep] = useState(1);
   const [bodyRegions, setBodyRegions] = useState<BodyRegion[]>(
-    pendingPlan?.bodyRegions ?? [],
+    pendingPlan?.bodyRegions ?? pendingPrefs?.bodyRegions ?? [],
   );
-  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
-  const [equipment, setEquipment] = useState<Equipment[]>(["none"]);
-  const [minutesMin, setMinutesMin] = useState<number>(15);
-  const [minutesMax, setMinutesMax] = useState<number>(30);
-  const [daysPerWeek, setDaysPerWeek] = useState<number[]>(defaultDays);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(
+    pendingPrefs?.difficulty ?? null,
+  );
+  const [equipment, setEquipment] = useState<Equipment[]>(
+    pendingPrefs?.equipment ?? ["none"],
+  );
+  const [minutesMin, setMinutesMin] = useState<number>(pendingPrefs?.minutesMin ?? 15);
+  const [minutesMax, setMinutesMax] = useState<number>(pendingPrefs?.minutesMax ?? 30);
+  const [daysPerWeek, setDaysPerWeek] = useState<number[]>(
+    pendingPrefs?.daysPerWeek ?? defaultDays,
+  );
   const [plan, setPlan] = useState<PlanData | null>(pendingPlan?.plan ?? null);
   const [saving, setSaving] = useState(false);
+  const [editLoaded, setEditLoaded] = useState(false);
   const autoSaveAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!editPlanId || !user || editLoaded) return;
+
+    const loadSavedPlan = async () => {
+      try {
+        const { data, error } = await withTimeout(
+          supabase.from("saved_plans").select("*").eq("id", editPlanId).eq("user_id", user.id).single(),
+          10_000,
+          "Load plan for edit",
+        );
+        if (error) throw error;
+
+        const planData = data.plan_data as PlanData;
+        const prefs = planData.preferences;
+        setBodyRegions(prefs.bodyRegions);
+        setDifficulty(prefs.difficulty);
+        setEquipment(prefs.equipment);
+        setMinutesMin(prefs.minutesMin);
+        setMinutesMax(prefs.minutesMax);
+        setDaysPerWeek(prefs.daysPerWeek);
+        setPlan(planData);
+        setEditLoaded(true);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Could not load plan",
+          description: error instanceof Error ? error.message : "Unexpected error",
+        });
+        navigate("/plans");
+      }
+    };
+
+    void loadSavedPlan();
+  }, [editPlanId, user, editLoaded, navigate, toast]);
 
   const progressValue = plan ? 100 : (step / QUESTION_STEPS) * 100;
 
@@ -195,6 +240,27 @@ const PlanBuilder = () => {
         .map((value) => BODY_REGIONS.find((item) => item.value === value)?.label ?? value)
         .join(" + ");
 
+      if (editPlanId && user) {
+        const { error } = await withTimeout(
+          supabase
+            .from("saved_plans")
+            .update({
+              title: `${regionLabels} plan`,
+              plan_data: plan as unknown as Json,
+            })
+            .eq("id", editPlanId)
+            .eq("user_id", user.id),
+          12_000,
+          "Update plan",
+        );
+        if (error) throw error;
+        clearPendingPlan();
+        trackEvent("plan_save");
+        toast({ title: "Plan updated", description: "Your weekly plan has been refreshed." });
+        navigate(`/plans/${editPlanId}`);
+        return;
+      }
+
       const { data, error } = await withTimeout(
         supabase
           .from("saved_plans")
@@ -223,14 +289,15 @@ const PlanBuilder = () => {
     } finally {
       setSaving(false);
     }
-  }, [plan, bodyRegions, user, navigate, toast]);
+  }, [plan, bodyRegions, user, navigate, toast, editPlanId]);
 
   useEffect(() => {
+    if (editPlanId) return;
     if (user && plan && pendingPlan && !autoSaveAttempted.current && !isPlanEmpty(plan)) {
       autoSaveAttempted.current = true;
       void handleSave();
     }
-  }, [user, plan, pendingPlan, handleSave]);
+  }, [user, plan, pendingPlan, handleSave, editPlanId]);
 
   const restart = () => {
     clearPendingPlan();
@@ -248,7 +315,7 @@ const PlanBuilder = () => {
   const stepLabel = plan ? "Your plan is ready" : `Step ${step} of ${QUESTION_STEPS}`;
 
   return (
-    <AppShell title="Build your plan" showBack backTo="/">
+    <AppShell title={editPlanId ? "Edit your plan" : "Build your plan"} showBack backTo={editPlanId ? `/plans/${editPlanId}` : "/"}>
       <MedicalDisclaimer compact />
 
       <div className="mt-4 space-y-5">
@@ -456,16 +523,42 @@ const PlanBuilder = () => {
                   {formatBodyRegions(bodyRegions)} · {formatTimeRange(minutesMin, minutesMax)}
                 </p>
               </div>
-              {user ? (
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving..." : "Save"}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const regenerated = buildWeeklyPlan(exercises, {
+                      bodyRegions,
+                      difficulty: difficulty!,
+                      equipment,
+                      minutesMin,
+                      minutesMax,
+                      daysPerWeek,
+                    });
+                    setPlan(regenerated);
+                    if (isPlanEmpty(regenerated)) {
+                      toast({
+                        variant: "destructive",
+                        title: "No exercises matched",
+                        description: "Try changing your preferences.",
+                      });
+                    }
+                  }}
+                >
+                  Regenerate
                 </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={handleSave}>
-                  Sign in to save
-                </Button>
-              )}
+                {user ? (
+                  <Button size="sm" onClick={handleSave} disabled={saving}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {saving ? "Saving..." : editPlanId ? "Update plan" : "Save"}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={handleSave}>
+                    Sign in to save
+                  </Button>
+                )}
+              </div>
             </div>
 
             {plan.schedule.map((day) => (
@@ -488,8 +581,18 @@ const PlanBuilder = () => {
               </div>
             ))}
 
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setPlan(null);
+                setStep(1);
+              }}
+            >
+              Change preferences
+            </Button>
             <Button variant="outline" className="w-full" onClick={restart}>
-              Start over
+              {editPlanId ? "Reset changes" : "Start over"}
             </Button>
           </section>
         ) : null}

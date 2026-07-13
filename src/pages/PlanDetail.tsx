@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ChevronRight, Pencil } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ExerciseDetailDialog from "@/components/ExerciseDetailDialog";
@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const PlanDetailContent = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -167,7 +168,18 @@ const PlanDetailContent = () => {
           </p>
           <p className="text-sm text-muted-foreground">exercises completed</p>
         </div>
-        <ShareProgressButton completed={completedCount} total={totalExercises} />
+        <div className="flex flex-col items-end gap-2">
+          <ShareProgressButton completed={completedCount} total={totalExercises} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => navigate(`/plan?edit=${id}`)}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit plan
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
