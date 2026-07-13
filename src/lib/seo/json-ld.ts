@@ -64,12 +64,18 @@ export const articleJsonLd = (params: {
   description: string;
   path: string;
   keywords?: string[];
+  image?: string;
+  datePublished?: string;
+  dateModified?: string;
 }) => ({
   "@context": "https://schema.org",
-  "@type": "Article",
+  "@type": "BlogPosting",
   headline: params.title,
   description: params.description,
   url: `${SITE_URL}${params.path}`,
+  image: params.image ? [params.image] : undefined,
+  datePublished: params.datePublished,
+  dateModified: params.dateModified ?? params.datePublished,
   author: {
     "@type": "Organization",
     name: SITE_NAME,
@@ -84,4 +90,28 @@ export const articleJsonLd = (params: {
   },
   keywords: params.keywords?.join(", "),
   inLanguage: "en-US",
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": `${SITE_URL}${params.path}`,
+  },
+});
+
+export const blogListingJsonLd = (posts: { title: string; path: string; image: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  name: `${SITE_NAME} Home Workout Blog`,
+  description:
+    "Free home workout guides, apartment gym tips, pain relief exercises, and state-by-state fitness articles for Americans.",
+  url: `${SITE_URL}/guides`,
+  publisher: {
+    "@type": "Organization",
+    name: SITE_NAME,
+    logo: SITE_LOGO,
+  },
+  blogPost: posts.slice(0, 12).map((post) => ({
+    "@type": "BlogPosting",
+    headline: post.title,
+    url: `${SITE_URL}${post.path}`,
+    image: post.image,
+  })),
 });

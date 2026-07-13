@@ -14,6 +14,8 @@ type SeoHeadProps = {
   keywords?: string[];
   noindex?: boolean;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  image?: string;
+  ogType?: "website" | "article";
 };
 
 const SeoHead = ({
@@ -23,11 +25,14 @@ const SeoHead = ({
   keywords = [],
   noindex = false,
   jsonLd,
+  image,
+  ogType = "website",
 }: SeoHeadProps) => {
   const canonical = `${SITE_URL}${path}`;
   const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
   const keywordString = keywords.length > 0 ? keywords.join(", ") : undefined;
   const jsonLdItems = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+  const ogImage = image ?? DEFAULT_OG_IMAGE;
 
   return (
     <Helmet>
@@ -41,12 +46,12 @@ const SeoHead = ({
       <meta name="language" content="en-US" />
       <meta name="content-language" content="en-US" />
 
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={ogType} />
       <meta property="og:url" content={canonical} />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={DEFAULT_OG_IMAGE} />
+      <meta property="og:image" content={ogImage} />
       <meta property="og:image:width" content={String(OG_IMAGE_WIDTH)} />
       <meta property="og:image:height" content={String(OG_IMAGE_HEIGHT)} />
       <meta property="og:image:alt" content={`${SITE_NAME} — home workouts without a gym`} />
@@ -55,7 +60,7 @@ const SeoHead = ({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
+      <meta name="twitter:image" content={ogImage} />
       <meta name="twitter:image:alt" content={`${SITE_NAME} — home workouts without a gym`} />
 
       {jsonLdItems.map((item, index) => (

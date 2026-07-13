@@ -10,6 +10,7 @@ import GoogleTagManager from "@/components/GoogleTagManager";
 import AnalyticsRouteTracker from "@/components/AnalyticsRouteTracker";
 import SiteVerification from "@/components/SiteVerification";
 import ClientOnly from "@/components/ClientOnly";
+import AdSenseScript from "@/components/ads/AdSenseScript";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { captureReferralFromUrl } from "@/lib/referral";
 import AppRoutes from "./AppRoutes";
@@ -34,7 +35,14 @@ const App = ({ url }: AppProps) => {
     captureReferralFromUrl();
   }, []);
 
-  const routes = <AppRoutes />;
+  const routes = (
+    <>
+      <AppRoutes />
+      <ClientOnly>
+        <AnalyticsRouteTracker />
+      </ClientOnly>
+    </>
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -51,7 +59,7 @@ const App = ({ url }: AppProps) => {
             <SpeedInsights />
             <GoogleTagManager />
             <SiteVerification />
-            <AnalyticsRouteTracker />
+            <AdSenseScript />
           </ClientOnly>
         </TooltipProvider>
       </AuthProvider>
