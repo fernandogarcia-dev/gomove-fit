@@ -35,38 +35,6 @@ const ogSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="96" y="540" fill="#9fd9bf" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600">gomove.fit</text>
 </svg>`;
 
-async function rasterizeFavicons() {
-  const paddedSquare = async (size, paddingRatio = 0.12) => {
-    const innerWidth = Math.round(size * (1 - paddingRatio * 2));
-    const logo = await sharp(logotipoPath)
-      .resize(innerWidth, null, { fit: "inside" })
-      .png()
-      .toBuffer();
-    const meta = await sharp(logo).metadata();
-    const left = Math.round((size - (meta.width ?? innerWidth)) / 2);
-    const top = Math.round((size - (meta.height ?? innerWidth)) / 2);
-
-    return sharp({
-      create: {
-        width: size,
-        height: size,
-        channels: 4,
-        background: { r: 7, g: 21, b: 16, alpha: 1 },
-      },
-    })
-      .composite([{ input: logo, left, top }])
-      .png();
-  };
-
-  await (await paddedSquare(16)).toFile(path.join(publicDir, "favicon-16x16.png"));
-  await (await paddedSquare(32)).toFile(path.join(publicDir, "favicon-32x32.png"));
-  await (await paddedSquare(48)).toFile(path.join(publicDir, "favicon-48x48.png"));
-  await (await paddedSquare(180, 0.1)).toFile(path.join(publicDir, "apple-touch-icon.png"));
-
-  const favicon32 = await sharp(path.join(publicDir, "favicon-32x32.png")).toBuffer();
-  await sharp(favicon32).toFile(path.join(publicDir, "favicon.ico"));
-}
-
 async function rasterizeOgImage() {
   const logo = await sharp(logotipoPath)
     .resize(520, null, { fit: "inside" })
@@ -174,17 +142,8 @@ async function rasterizeBlogCovers() {
   }
 }
 
-await rasterizeFavicons();
 await rasterizeOgImage();
 await rasterizeLogoPng();
 await rasterizeBlogCovers();
 
-const faviconSvg = await sharp(path.join(publicDir, "favicon-48x48.png"))
-  .resize(512, 512)
-  .toBuffer();
-fs.writeFileSync(
-  path.join(publicDir, "favicon.svg"),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><image href="data:image/png;base64,${faviconSvg.toString("base64")}" width="512" height="512"/></svg>`,
-);
-
-console.log("Generated brand images: favicons, og-image.png, logotipo.png, blog covers (webp)");
+console.log("Generated brand images: og-image.png, logotipo.png, blog covers (webp)");
