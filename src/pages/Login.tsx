@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Check, ClipboardList, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoMoveLogo from "@/components/GoMoveLogo";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import { trackEvent } from "@/lib/analytics/events";
 import { clearStoredReferralCode, getStoredReferralCode } from "@/lib/referral";
 import { BODY_REGIONS, DAYS_OF_WEEK, DIFFICULTIES, type BodyRegion, type Difficulty } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { loadPendingPlan, savePendingPlan, type PendingPlan } from "@/lib/pending-plan";
+import { PendingPlanCard, PlanWizardDialog } from "@/components/plan/PendingPlanCard";
 
 const GENDERS = [
   { value: "female", label: "Female" },
@@ -47,11 +49,34 @@ const Login = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(() => loadPendingPlan());
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
   const { toast } = useToast();
+
+  const refreshPendingPlan = () => setPendingPlan(loadPendingPlan());
+
+  useEffect(() => {
+    const prefs = pendingPlan?.plan.preferences;
+    if (!prefs) return;
+    if (prefs.bodyRegions?.length) {
+      setDiscomfortAreas(prefs.bodyRegions);
+    }
+    if (prefs.difficulty) {
+      setFitnessLevel(prefs.difficulty);
+    }
+    if (prefs.daysPerWeek?.length) {
+      setWorkoutDays(prefs.daysPerWeek);
+    }
+  }, [pendingPlan]);
+
+  const canCreateAccount = useMemo(
+    () => acceptTerms && acceptDisclaimer,
+    [acceptTerms, acceptDisclaimer],
+  );
 
   const toggleDiscomfort = (value: BodyRegion) => {
     setDiscomfortAreas((current) =>
@@ -195,6 +220,45 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           {isSignUp ? (
             <>
+              {pendingPlan ? (
+                <PendingPlanCard pending={pendingPlan} onUpdated={refreshPendingPlan} />
+              ) : (
+                <section className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <ClipboardList className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <p className="font-medium text-foreground">Want a personalized plan first?</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Build your weekly exercise plan here without leaving signup.
+                        </p>
+                      </div>
+                      <PlanWizardDialog
+                        open={planDialogOpen}
+                        onOpenChange={setPlanDialogOpen}
+                        title="Build your plan"
+                        submitLabel="Save plan"
+                        trigger={
+                          <Button type="button" variant="outline" size="sm">
+                            Build my plan
+                          </Button>
+                        }
+                        onComplete={(plan, bodyRegions) => {
+                          savePendingPlan({ plan, bodyRegions });
+                          refreshPendingPlan();
+                          toast({
+                            title: "Plan created",
+                            description: "Finish signup to save it to your account.",
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <section className="space-y-3 rounded-xl border border-border bg-card p-4">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   About you
@@ -448,7 +512,11 @@ const Login = () => {
             </>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || (isSignUp && !canCreateAccount)}
+          >
             {loading ? "Loading..." : isSignUp ? "Create account" : "Sign in"}
           </Button>
         </form>

@@ -8,6 +8,8 @@ type PendingPlan = {
   bodyRegions: BodyRegion[];
 };
 
+export type { PendingPlan };
+
 /** Keeps a generated-but-unsaved plan across the sign-in/sign-up redirect. */
 export const savePendingPlan = (pending: PendingPlan): void => {
   try {
